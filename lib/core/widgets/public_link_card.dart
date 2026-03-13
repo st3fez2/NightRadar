@@ -7,18 +7,19 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../app_copy.dart';
+import '../app_flavor.dart';
 import '../public_link_config.dart';
 
 class PublicLinkCard extends StatefulWidget {
   const PublicLinkCard({
     super.key,
-    this.title = 'QR pubblico NightRadar',
-    this.subtitle =
-        'Condividi subito il link pubblico del progetto, scarica il QR o apri il sito live.',
+    this.title,
+    this.subtitle,
   });
 
-  final String title;
-  final String subtitle;
+  final String? title;
+  final String? subtitle;
 
   @override
   State<PublicLinkCard> createState() => _PublicLinkCardState();
@@ -31,7 +32,22 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.copy;
     final compact = MediaQuery.sizeOf(context).width < 430;
+    final title =
+        widget.title ??
+        copy.text(
+          it: 'QR pubblico NightRadar',
+          en: 'NightRadar public QR',
+        );
+    final subtitle =
+        widget.subtitle ??
+        copy.text(
+          it:
+              'Condividi subito il link pubblico del progetto, scarica il QR o apri il sito live.',
+          en:
+              'Share the project public link right away, download the QR, or open the live site.',
+        );
 
     return Card(
       child: Padding(
@@ -53,8 +69,10 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
                     color: const Color(0xFFEDE5DD),
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: const Text(
-                    'PUBLIC LINK LIVE',
+                  child: Text(
+                    AppFlavorConfig.isDemo
+                        ? copy.text(it: 'LINK PUBBLICO DEMO', en: 'PUBLIC LINK DEMO')
+                        : copy.text(it: 'LINK PUBBLICO LIVE', en: 'PUBLIC LINK LIVE'),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -71,9 +89,9 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
               ],
             ),
             const SizedBox(height: 14),
-            Text(widget.title, style: Theme.of(context).textTheme.titleLarge),
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
-            Text(widget.subtitle),
+            Text(subtitle),
             const SizedBox(height: 18),
             Center(
               child: Container(
@@ -99,7 +117,7 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
             ),
             const SizedBox(height: 18),
             Text(
-              'Link pubblico',
+              copy.text(it: 'Link pubblico', en: 'Public link'),
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -123,22 +141,22 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
                 ElevatedButton.icon(
                   onPressed: _isWorking ? null : _shareQr,
                   icon: const Icon(Icons.ios_share_rounded),
-                  label: const Text('Condividi QR'),
+                  label: Text(copy.text(it: 'Condividi QR', en: 'Share QR')),
                 ),
                 OutlinedButton.icon(
                   onPressed: _isWorking ? null : _downloadQr,
                   icon: const Icon(Icons.download_rounded),
-                  label: const Text('Scarica'),
+                  label: Text(copy.text(it: 'Scarica', en: 'Download')),
                 ),
                 OutlinedButton.icon(
                   onPressed: _isWorking ? null : _copyLink,
                   icon: const Icon(Icons.content_copy_rounded),
-                  label: const Text('Copia link'),
+                  label: Text(copy.text(it: 'Copia link', en: 'Copy link')),
                 ),
                 TextButton.icon(
                   onPressed: _isWorking ? null : _openLink,
                   icon: const Icon(Icons.open_in_new_rounded),
-                  label: const Text('Apri sito'),
+                  label: Text(copy.text(it: 'Apri sito', en: 'Open site')),
                 ),
               ],
             ),
@@ -149,22 +167,34 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
   }
 
   Future<void> _copyLink() async {
+    final copiedMessage = context.copy.text(
+      it: 'Link pubblico copiato',
+      en: 'Public link copied',
+    );
     await Clipboard.setData(ClipboardData(text: _publicUrl));
-    _showMessage('Link pubblico copiato');
+    _showMessage(copiedMessage);
   }
 
   Future<void> _openLink() async {
+    final unableMessage = context.copy.text(
+      it: 'Impossibile aprire il link pubblico',
+      en: 'Unable to open the public link',
+    );
     final opened = await launchUrl(
       Uri.parse(_publicUrl),
       webOnlyWindowName: '_blank',
     );
 
     if (!opened) {
-      _showMessage('Impossibile aprire il link pubblico');
+      _showMessage(unableMessage);
     }
   }
 
   Future<void> _downloadQr() async {
+    final successMessage = context.copy.text(
+      it: 'QR scaricato con successo',
+      en: 'QR downloaded successfully',
+    );
     await _runWithLoader(() async {
       final bytes = await _buildQrBytes();
       await FileSaver.instance.saveFile(
@@ -173,7 +203,7 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
         fileExtension: 'png',
         mimeType: MimeType.png,
       );
-      _showMessage('QR scaricato con successo');
+      _showMessage(successMessage);
     });
   }
 
@@ -208,6 +238,10 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
   }
 
   Future<Uint8List> _buildQrBytes() async {
+    final generationError = context.copy.text(
+      it: 'Impossibile generare il QR',
+      en: 'Unable to generate the QR',
+    );
     final painter = QrPainter(
       data: _publicUrl,
       version: QrVersions.auto,
@@ -227,7 +261,7 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
     );
 
     if (byteData == null) {
-      throw Exception('Impossibile generare il QR');
+      throw Exception(generationError);
     }
 
     return byteData.buffer.asUint8List();

@@ -1,10 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import 'app_flavor.dart';
+
 class PublicLinkConfig {
-  static const fallbackUrl = String.fromEnvironment(
-    'PUBLIC_APP_URL',
-    defaultValue: 'https://st3fez2.github.io/NightRadar/',
-  );
+  static String get fallbackUrl => AppFlavorConfig.defaultPublicAppUrl;
 
   static String resolveAppUrl() {
     if (kIsWeb) {

@@ -43,18 +43,48 @@ jobs:
           repo_name="${GITHUB_REPOSITORY#*/}"
           owner="${GITHUB_REPOSITORY_OWNER}"
           if [[ "$repo_name" == "${owner}.github.io" ]]; then
-            echo "value=/" >> "$GITHUB_OUTPUT"
+            echo "prod=/" >> "$GITHUB_OUTPUT"
+            echo "demo=/demo/" >> "$GITHUB_OUTPUT"
+            echo "prod_url=https://${owner}.github.io/" >> "$GITHUB_OUTPUT"
+            echo "demo_url=https://${owner}.github.io/demo/" >> "$GITHUB_OUTPUT"
           else
-            echo "value=/$repo_name/" >> "$GITHUB_OUTPUT"
+            echo "prod=/$repo_name/" >> "$GITHUB_OUTPUT"
+            echo "demo=/$repo_name/demo/" >> "$GITHUB_OUTPUT"
+            echo "prod_url=https://${owner}.github.io/$repo_name/" >> "$GITHUB_OUTPUT"
+            echo "demo_url=https://${owner}.github.io/$repo_name/demo/" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build Flutter web app
-        run: flutter build web --release --base-href "${{ steps.base_href.outputs.value }}"
+      - name: Build active web app
+        run: >
+          flutter build web --release
+          --base-href "${{ steps.base_href.outputs.prod }}"
+          --dart-define=APP_FLAVOR=prod
+          --dart-define=PUBLIC_APP_URL=${{ steps.base_href.outputs.prod_url }}
+
+      - name: Assemble Pages artifact root
+        shell: bash
+        run: |
+          rm -rf build/site
+          mkdir -p build/site
+          cp -R build/web/. build/site/
+
+      - name: Build demo web app
+        run: >
+          flutter build web --release
+          --base-href "${{ steps.base_href.outputs.demo }}"
+          --dart-define=APP_FLAVOR=demo
+          --dart-define=PUBLIC_APP_URL=${{ steps.base_href.outputs.demo_url }}
+
+      - name: Assemble demo artifact
+        shell: bash
+        run: |
+          mkdir -p build/site/demo
+          cp -R build/web/. build/site/demo/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: build/web
+          path: build/site
 
   deploy:
     needs: build

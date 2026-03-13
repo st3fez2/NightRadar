@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app_copy.dart';
+
 class ResponsivePage extends StatelessWidget {
   const ResponsivePage({super.key, required this.child, this.maxWidth = 760});
 
@@ -221,6 +223,7 @@ class RadarChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.copy;
     final style = switch (label) {
       'hot' => (const Color(0xFFE85D3F), Colors.white),
       'near_full' => (const Color(0xFF18130F), Colors.white),
@@ -235,7 +238,7 @@ class RadarChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        label.replaceAll('_', ' ').toUpperCase(),
+        copy.radarLabel(label),
         style: TextStyle(
           color: style.$2,
           fontWeight: FontWeight.w700,

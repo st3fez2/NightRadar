@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/app_providers.dart';
+import '../../../core/app_copy.dart';
 import '../../../core/widgets/common_widgets.dart';
+import '../../../core/widgets/language_toggle.dart';
 
 class WalletScreen extends ConsumerWidget {
   const WalletScreen({super.key, required this.reservationId});
@@ -14,10 +15,19 @@ class WalletScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final copy = context.copy;
     final reservationAsync = ref.watch(reservationProvider(reservationId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Wallet')),
+      appBar: AppBar(
+        title: Text(copy.text(it: 'Wallet', en: 'Wallet')),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: Center(child: LanguageToggle(compact: true)),
+          ),
+        ],
+      ),
       body: reservationAsync.when(
         data: (reservation) {
           final showQr =
@@ -42,8 +52,14 @@ class WalletScreen extends ConsumerWidget {
                       children: [
                         Text(
                           showQr
-                              ? 'Mostra questo QR all ingresso'
-                              : 'Prenotazione in attesa',
+                              ? copy.text(
+                                  it: 'Mostra questo QR all ingresso',
+                                  en: 'Show this QR at the entrance',
+                                )
+                              : copy.text(
+                                  it: 'Prenotazione in attesa',
+                                  en: 'Reservation pending',
+                                ),
                           style: Theme.of(context).textTheme.titleLarge,
                           textAlign: TextAlign.center,
                         ),
@@ -63,20 +79,27 @@ class WalletScreen extends ConsumerWidget {
                           ),
                         const SizedBox(height: 14),
                         Text(
-                          DateFormat(
-                            'EEEE d MMMM, HH:mm',
-                            'it_IT',
-                          ).format(reservation.startsAt),
+                          copy.longDateTime(reservation.startsAt),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Referente: ${reservation.guestName}  ·  Persone: ${reservation.partySize}',
+                          copy.text(
+                            it:
+                                'Referente: ${reservation.guestName}  ·  Persone: ${reservation.partySize}',
+                            en:
+                                'Lead guest: ${reservation.guestName}  ·  People: ${reservation.partySize}',
+                          ),
                           textAlign: TextAlign.center,
                         ),
                         if (reservation.offerTitle != null) ...[
                           const SizedBox(height: 8),
-                          Text('Offerta: ${reservation.offerTitle}'),
+                          Text(
+                            copy.text(
+                              it: 'Offerta: ${reservation.offerTitle}',
+                              en: 'Offer: ${reservation.offerTitle}',
+                            ),
+                          ),
                         ],
                         if (reservation.promoterName != null) ...[
                           const SizedBox(height: 8),
@@ -89,7 +112,9 @@ class WalletScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () => context.go('/app'),
-                  child: const Text('Torna alla home'),
+                  child: Text(
+                    copy.text(it: 'Torna alla home', en: 'Back to home'),
+                  ),
                 ),
               ],
             ),
@@ -97,7 +122,7 @@ class WalletScreen extends ConsumerWidget {
         },
         error: (error, stackTrace) => Center(
           child: EmptyStateCard(
-            title: 'Wallet non disponibile',
+            title: copy.text(it: 'Wallet non disponibile', en: 'Wallet unavailable'),
             message: error.toString(),
           ),
         ),

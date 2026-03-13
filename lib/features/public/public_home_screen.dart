@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import '../../core/app_copy.dart';
+import '../../core/app_flavor.dart';
 import '../../core/app_providers.dart';
 import '../../core/widgets/brand_lockup.dart';
 import '../../core/widgets/common_widgets.dart';
+import '../../core/widgets/flavor_notice_card.dart';
+import '../../core/widgets/language_toggle.dart';
 import '../../core/widgets/public_link_card.dart';
 import '../../shared/models.dart';
 
@@ -14,6 +17,7 @@ class PublicHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final copy = context.copy;
     final eventsAsync = ref.watch(eventFeedProvider);
     final profileAsync = ref.watch(currentProfileProvider);
 
@@ -51,6 +55,11 @@ class PublicHomeScreen extends ConsumerWidget {
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                     children: [
+                      const Align(
+                        alignment: Alignment.centerRight,
+                        child: LanguageToggle(),
+                      ),
+                      const SizedBox(height: 12),
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final stacked = constraints.maxWidth < 940;
@@ -75,10 +84,17 @@ class PublicHomeScreen extends ConsumerWidget {
                                   eventCount: loadedEvents?.length ?? 0,
                                 ),
                                 const SizedBox(height: 16),
-                                const PublicLinkCard(
-                                  title: 'Main page con QR sempre pronto',
-                                  subtitle:
-                                      'Questo e il link pubblico ufficiale da condividere, scaricare o aprire su Android, iPhone e web.',
+                                PublicLinkCard(
+                                  title: copy.text(
+                                    it: 'Main page con QR sempre pronto',
+                                    en: 'Main page with QR always ready',
+                                  ),
+                                  subtitle: copy.text(
+                                    it:
+                                        'Questo e il link pubblico ufficiale da condividere, scaricare o aprire su Android, iPhone e web.',
+                                    en:
+                                        'This is the official public link to share, download, or open on Android, iPhone, and web.',
+                                  ),
                                 ),
                               ],
                             );
@@ -101,12 +117,19 @@ class PublicHomeScreen extends ConsumerWidget {
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              const Expanded(
+                              Expanded(
                                 flex: 5,
                                 child: PublicLinkCard(
-                                  title: 'Main page con QR sempre pronto',
-                                  subtitle:
-                                      'Condividi il sito live, scarica il QR o apri subito la versione pubblica mobile-first del progetto.',
+                                  title: copy.text(
+                                    it: 'Main page con QR sempre pronto',
+                                    en: 'Main page with QR always ready',
+                                  ),
+                                  subtitle: copy.text(
+                                    it:
+                                        'Condividi il sito live, scarica il QR o apri subito la versione pubblica mobile-first del progetto.',
+                                    en:
+                                        'Share the live site, download the QR, or open the public mobile-first version of the product right away.',
+                                  ),
                                 ),
                               ),
                             ],
@@ -117,48 +140,136 @@ class PublicHomeScreen extends ConsumerWidget {
                       Wrap(
                         spacing: 12,
                         runSpacing: 12,
-                        children: const [
+                        children: [
                           _ValueCard(
-                            title: 'Per i PR',
-                            description:
-                                'Crei eventi, chiudi le liste, esporti in testo puro e giri tutto su WhatsApp senza passaggi inutili.',
+                            title: copy.text(it: 'Per i PR', en: 'For promoters'),
+                            description: copy.text(
+                              it:
+                                  'Crei eventi, chiudi le liste, esporti in testo puro e giri tutto su WhatsApp senza passaggi inutili.',
+                              en:
+                                  'Create events, close lists, export plain text, and forward everything on WhatsApp without extra steps.',
+                            ),
                             accent: Color(0xFFE85D3F),
                             icon: Icons.campaign_rounded,
                           ),
                           _ValueCard(
-                            title: 'Per gli utenti',
-                            description:
-                                'Scopri serate, confronti offerte e tieni il QR personale sempre a portata di mano.',
+                            title: copy.text(it: 'Per gli utenti', en: 'For users'),
+                            description: copy.text(
+                              it:
+                                  'Scopri serate, confronti offerte e tieni il QR personale sempre a portata di mano.',
+                              en:
+                                  'Discover nights out, compare offers, and keep your personal QR always within reach.',
+                            ),
                             accent: Color(0xFF186B5B),
                             icon: Icons.qr_code_2_rounded,
                           ),
                           _ValueCard(
-                            title: 'Per il locale',
-                            description:
-                                'Riceve solo la lista finale pronta, senza dashboard dedicata e senza attriti operativi.',
+                            title: copy.text(it: 'Per il locale', en: 'For venues'),
+                            description: copy.text(
+                              it:
+                                  'Riceve solo la lista finale pronta, senza dashboard dedicata e senza attriti operativi.',
+                              en:
+                                  'Receives only the final ready-to-use list, with no dedicated dashboard and no operational friction.',
+                            ),
                             accent: Color(0xFF18130F),
                             icon: Icons.inventory_2_outlined,
                           ),
                         ],
                       ),
+                      if (AppFlavorConfig.isDemo) ...[
+                        const SizedBox(height: 16),
+                        const FlavorNoticeCard(),
+                      ],
+                      const SizedBox(height: 16),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: () => context.push('/legal?from=/'),
+                        child: Ink(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.82),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: const Color(0xFFE0D2C4)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                height: 44,
+                                width: 44,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF4E6DB),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(
+                                  Icons.policy_outlined,
+                                  color: Color(0xFFE85D3F),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      copy.text(
+                                        it: 'Disclaimer e privacy sempre accessibili',
+                                        en: 'Disclaimer and privacy always available',
+                                      ),
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      copy.text(
+                                        it:
+                                            'NightRadar richiede accettazione iniziale e lascia i testi legali sempre riapribili dal web pubblico.',
+                                        en:
+                                            'NightRadar requires initial acceptance and keeps the legal texts always accessible again from the public web page.',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Icon(Icons.arrow_forward_rounded),
+                            ],
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       Text(
-                        'Serate live in evidenza',
+                        copy.text(
+                          it: 'Serate live in evidenza',
+                          en: 'Highlighted live nights',
+                        ),
                         style: Theme.of(context).textTheme.headlineMedium,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Landing pubblica ottimizzata per mobile: accesso rapido, look piu deciso e CTA chiare per utenti e PR.',
+                        copy.text(
+                          it:
+                              'Landing pubblica ottimizzata per mobile: accesso rapido, look piu deciso e CTA chiare per utenti e PR.',
+                          en:
+                              'Public landing optimized for mobile: faster access, a sharper look, and clearer CTAs for users and promoters.',
+                        ),
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                       const SizedBox(height: 16),
                       eventsAsync.when(
                         data: (events) {
                           if (events.isEmpty) {
-                            return const EmptyStateCard(
-                              title: 'Nessuna serata pubblica al momento',
-                              message:
-                                  'La landing resta pronta con QR e link pubblico, ma non ci sono eventi attivi da mostrare adesso.',
+                            return EmptyStateCard(
+                              title: copy.text(
+                                it: 'Nessuna serata pubblica al momento',
+                                en: 'No public events right now',
+                              ),
+                              message: copy.text(
+                                it:
+                                    'La landing resta pronta con QR e link pubblico, ma non ci sono eventi attivi da mostrare adesso.',
+                                en:
+                                    'The landing stays ready with QR and public link, but there are no active events to show right now.',
+                              ),
                             );
                           }
 
@@ -183,7 +294,10 @@ class PublicHomeScreen extends ConsumerWidget {
                           );
                         },
                         error: (error, stackTrace) => EmptyStateCard(
-                          title: 'Feed pubblico non disponibile',
+                          title: copy.text(
+                            it: 'Feed pubblico non disponibile',
+                            en: 'Public feed unavailable',
+                          ),
                           message: error.toString(),
                         ),
                         loading: () => const Padding(
@@ -218,6 +332,7 @@ class _PublicHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.copy;
     final profile = profileAsync.valueOrNull;
     final firstName = profile?.fullName.split(' ').first;
 
@@ -237,9 +352,12 @@ class _PublicHero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const NightRadarLockup(
+          NightRadarLockup(
             label: 'NightRadar',
-            caption: 'AI nightlife signal',
+            caption: copy.text(
+              it: 'Segnale nightlife AI',
+              en: 'AI nightlife signal',
+            ),
             textColor: Colors.white,
             iconSize: 58,
           ),
@@ -250,15 +368,42 @@ class _PublicHero extends StatelessWidget {
             children: [
               _HeroTag(
                 label: profile == null
-                    ? 'WEB MOBILE FIRST'
-                    : 'BENTORNATO ${firstName?.toUpperCase() ?? 'NIGHTRADAR'}',
+                    ? copy.text(
+                        it: 'WEB MOBILE FIRST',
+                        en: 'WEB MOBILE FIRST',
+                      )
+                    : copy.text(
+                        it:
+                            'BENTORNATO ${firstName?.toUpperCase() ?? 'NIGHTRADAR'}',
+                        en:
+                            'WELCOME BACK ${firstName?.toUpperCase() ?? 'NIGHTRADAR'}',
+                      ),
               ),
-              _HeroTag(label: '$eventCount SERATE PUBBLICHE'),
+              if (AppFlavorConfig.isDemo)
+                _HeroTag(label: AppFlavorConfig.modeLabel),
+              _HeroTag(
+                label: copy.text(
+                  it: '$eventCount SERATE PUBBLICHE',
+                  en: '$eventCount PUBLIC EVENTS',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 18),
           Text(
-            'NightRadar unisce PR e utenti in una home pubblica pronta da condividere.',
+            AppFlavorConfig.isDemo
+                ? copy.text(
+                    it:
+                        'NightRadar Demo mostra utenti e PR in una vetrina rapida, pensata per farti capire il prodotto in pochi tocchi.',
+                    en:
+                        'NightRadar Demo shows users and promoters in a quick showcase built to explain the product in just a few taps.',
+                  )
+                : copy.text(
+                    it:
+                        'NightRadar unisce PR e utenti in una home pubblica pronta da condividere.',
+                    en:
+                        'NightRadar brings promoters and users together in a public home page ready to share.',
+                  ),
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               color: Colors.white,
               fontSize: 38,
@@ -267,7 +412,19 @@ class _PublicHero extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            'QR sempre visibile, link pubblico unico, esperienza piu rapida su Android e iPhone, con area operativa separata per PR e consumer.',
+            AppFlavorConfig.isDemo
+                ? copy.text(
+                    it:
+                        'QR sempre visibile, account demo pronti e navigazione read-only. Quando vuoi lavorare davvero su eventi, liste e prenotazioni, passi alla versione attiva.',
+                    en:
+                        'QR always visible, demo accounts ready, and read-only navigation. When you want to work for real on events, lists, and reservations, switch to the live version.',
+                  )
+                : copy.text(
+                    it:
+                        'QR sempre visibile, link pubblico unico, esperienza piu rapida su Android e iPhone, con area operativa separata per PR e consumer.',
+                    en:
+                        'QR always visible, one public link, faster experience on Android and iPhone, with a separate operational area for promoters and users.',
+                  ),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Colors.white.withValues(alpha: 0.82),
               height: 1.45,
@@ -284,31 +441,62 @@ class _PublicHero extends StatelessWidget {
                   onPressed: onPrimaryTap,
                   icon: const Icon(Icons.rocket_launch_rounded),
                   label: Text(
-                    profile == null ? 'Apri NightRadar' : 'Vai alla tua area',
+                    profile == null
+                        ? (AppFlavorConfig.isDemo
+                              ? copy.text(it: 'Apri la demo', en: 'Open demo')
+                              : copy.text(
+                                  it: 'Apri NightRadar',
+                                  en: 'Open NightRadar',
+                                ))
+                        : copy.text(
+                            it: 'Vai alla tua area',
+                            en: 'Go to your area',
+                          ),
                   ),
                 ),
               ),
-              SizedBox(
-                width: 220,
-                child: OutlinedButton.icon(
-                  onPressed: onSecondaryTap,
-                  icon: const Icon(Icons.local_activity_outlined),
-                  label: const Text('Guarda una serata'),
+              if (AppFlavorConfig.isDemo)
+                SizedBox(
+                  width: 220,
+                  child: OutlinedButton.icon(
+                    onPressed: onSecondaryTap,
+                    icon: const Icon(Icons.local_activity_outlined),
+                    label: Text(
+                      copy.text(
+                        it: 'Guarda una serata',
+                        en: 'View an event',
+                      ),
+                    ),
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 22),
           Wrap(
             spacing: 12,
             runSpacing: 12,
-            children: const [
-              _SignalStat(value: 'QR', label: 'Share, download, link pubblico'),
+            children: [
+              _SignalStat(
+                value: 'QR',
+                label: copy.text(
+                  it: 'Share, download, link pubblico',
+                  en: 'Share, download, public link',
+                ),
+              ),
               _SignalStat(
                 value: 'PR',
-                label: 'Eventi e guest list esportabili',
+                label: copy.text(
+                  it: 'Eventi e guest list esportabili',
+                  en: 'Exportable events and guest lists',
+                ),
               ),
-              _SignalStat(value: 'PASS', label: 'Wallet rapido per gli utenti'),
+              _SignalStat(
+                value: 'PASS',
+                label: copy.text(
+                  it: 'Wallet rapido per gli utenti',
+                  en: 'Fast wallet for users',
+                ),
+              ),
             ],
           ),
         ],
@@ -444,7 +632,7 @@ class _LandingEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatter = DateFormat('EEE d MMM, HH:mm', 'it_IT');
+    final copy = context.copy;
 
     return InkWell(
       borderRadius: BorderRadius.circular(28),
@@ -474,7 +662,7 @@ class _LandingEventCard extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text('${event.venueName}  ${event.city}'),
                         const SizedBox(height: 4),
-                        Text(formatter.format(event.startsAt)),
+                        Text(copy.shortDateTime(event.startsAt)),
                       ],
                     ),
                   ),
@@ -486,6 +674,10 @@ class _LandingEventCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
+                  if (event.minimumAge != null)
+                    Chip(
+                      label: Text(copy.minimumAgeLabel(event.minimumAge)),
+                    ),
                   for (final tag in event.musicTags.take(3))
                     Chip(label: Text(tag)),
                 ],
@@ -496,12 +688,12 @@ class _LandingEventCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       event.bestOfferPrice == null
-                          ? 'Offerte in aggiornamento'
-                          : 'Da EUR ${event.bestOfferPrice!.toStringAsFixed(0)}',
+                          ? copy.unavailableOffersPrice()
+                          : copy.fromPrice(event.bestOfferPrice!),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
-                  Text('${event.offerCount} offerte'),
+                  Text(copy.offersCount(event.offerCount)),
                 ],
               ),
             ],

@@ -4,18 +4,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'app_copy.dart';
 import '../features/auth/auth_screen.dart';
 import '../features/events/presentation/event_detail_screen.dart';
 import '../features/events/presentation/reservation_form_screen.dart';
 import '../features/events/presentation/user_home_screen.dart';
+import '../features/legal/legal_consent_screen.dart';
+import '../features/legal/legal_providers.dart';
 import '../features/events/presentation/wallet_screen.dart';
 import '../features/promoter/promoter_dashboard_screen.dart';
 import '../features/public/public_home_screen.dart';
+import '../shared/legal_constants.dart';
 import '../shared/models.dart';
 import 'app_providers.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final client = ref.watch(supabaseClientProvider);
+  final localLegalAccepted = ref.watch(localLegalConsentProvider);
   final refresh = GoRouterRefreshStream(client.auth.onAuthStateChange);
   ref.onDispose(refresh.dispose);
 
@@ -25,10 +30,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final signedIn = client.auth.currentSession != null;
       final isAuthRoute = state.matchedLocation == '/auth';
+      final isLegalRoute = state.matchedLocation == '/legal';
       final isPublicRoute =
           state.matchedLocation == '/' ||
+          isLegalRoute ||
           isAuthRoute ||
           state.fullPath == '/event/:eventId';
+
+      if (!localLegalAccepted && !isLegalRoute) {
+        final from = Uri.encodeComponent(state.uri.toString());
+        return '/legal?from=$from';
+      }
 
       if (!signedIn && !isPublicRoute) {
         final from = Uri.encodeComponent(state.uri.toString());
@@ -47,6 +59,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
+      GoRoute(
+        path: '/legal',
+        builder: (context, state) => LegalConsentScreen(
+          fromPath: state.uri.queryParameters['from'],
+        ),
+      ),
       GoRoute(path: '/', builder: (context, state) => const PublicHomeScreen()),
       GoRoute(path: '/app', builder: (context, state) => const AppHomeScreen()),
       GoRoute(
@@ -79,12 +97,19 @@ class AppHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final copy = context.copy;
     final profileAsync = ref.watch(currentProfileProvider);
 
     return profileAsync.when(
       data: (profile) {
         if (profile == null) {
           return const AuthScreen();
+        }
+
+        if (!profile.hasAcceptedLegalVersion(nightRadarLegalVersion)) {
+          return const LegalConsentScreen(
+            requireSignedInProfileAcceptance: true,
+          );
         }
 
         return switch (profile.role) {
@@ -94,10 +119,16 @@ class AppHomeScreen extends ConsumerWidget {
         };
       },
       error: (error, stackTrace) =>
-          _RouteStatusView(title: 'Errore profilo', message: error.toString()),
-      loading: () => const _RouteStatusView(
+          _RouteStatusView(
+            title: copy.text(it: 'Errore profilo', en: 'Profile error'),
+            message: error.toString(),
+          ),
+      loading: () => _RouteStatusView(
         title: 'NightRadar',
-        message: 'Sto preparando la tua area.',
+        message: copy.text(
+          it: 'Sto preparando la tua area.',
+          en: 'Preparing your area.',
+        ),
         loading: true,
       ),
     );
@@ -109,10 +140,15 @@ class _LegacyRoleScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _RouteStatusView(
-      title: 'Area Locale Rimossa',
-      message:
-          'NightRadar ora e solo per utenti e PR. I locali ricevono le liste finali via condivisione esterna, senza dashboard dedicata nell app.',
+    final copy = context.copy;
+    return _RouteStatusView(
+      title: copy.text(it: 'Area locale rimossa', en: 'Venue area removed'),
+      message: copy.text(
+        it:
+            'NightRadar ora e solo per utenti e PR. I locali ricevono le liste finali via condivisione esterna, senza dashboard dedicata nell app.',
+        en:
+            'NightRadar is now only for users and promoters. Venues receive final lists via external sharing, without a dedicated in-app dashboard.',
+      ),
     );
   }
 }

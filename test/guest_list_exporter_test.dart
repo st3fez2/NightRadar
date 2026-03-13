@@ -1,12 +1,15 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'package:nightradar/core/app_copy.dart';
 import 'package:nightradar/features/promoter/guest_list_exporter.dart';
 import 'package:nightradar/shared/models.dart';
 
 void main() {
   setUpAll(() async {
     await initializeDateFormatting('it_IT');
+    await initializeDateFormatting('en_US');
   });
 
   test('buildGuestListExport produces a shareable event list', () {
@@ -50,6 +53,7 @@ void main() {
     ];
 
     final export = buildGuestListExport(
+      copy: AppCopy(const Locale('it')),
       profile: profile,
       event: event,
       reservations: reservations,
@@ -63,5 +67,35 @@ void main() {
     expect(export, contains('1. Alice - 3 pax - APPROVED'));
     expect(export, contains('Note: Arriva tardi'));
     expect(export, contains('2. Bruno - 2 pax - CHECKED_IN'));
+  });
+
+  test('buildGuestListExport can switch to English output', () {
+    final profile = AppProfile(
+      id: 'profile-1',
+      fullName: 'Marco Bianchi',
+      role: AppRole.promoter,
+    );
+    final event = EventSummary(
+      id: 'event-1',
+      venueId: 'venue-1',
+      title: 'Friday Signal',
+      venueName: 'Volt Club Milano',
+      city: 'Milano',
+      startsAt: DateTime(2026, 3, 20, 23, 30),
+      radarLabel: 'hot',
+      radarScore: 72,
+    );
+
+    final export = buildGuestListExport(
+      copy: AppCopy(const Locale('en')),
+      profile: profile,
+      event: event,
+      reservations: const [],
+    );
+
+    expect(export, contains('Date:'));
+    expect(export, contains('Guest entries: 0'));
+    expect(export, contains('People: 0'));
+    expect(export, contains('No guest entries added yet.'));
   });
 }

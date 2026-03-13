@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/app_copy.dart';
+import '../../../core/app_flavor.dart';
 import '../../../core/app_providers.dart';
 import '../../../core/widgets/common_widgets.dart';
+import '../../../core/widgets/flavor_notice_card.dart';
+import '../../../core/widgets/language_toggle.dart';
 import '../../../shared/models.dart';
 
 class ReservationFormScreen extends ConsumerStatefulWidget {
-  const ReservationFormScreen({
-    super.key,
-    required this.eventId,
-    this.offerId,
-  });
+  const ReservationFormScreen({super.key, required this.eventId, this.offerId});
 
   final String eventId;
   final String? offerId;
@@ -21,8 +21,7 @@ class ReservationFormScreen extends ConsumerStatefulWidget {
       _ReservationFormScreenState();
 }
 
-class _ReservationFormScreenState
-    extends ConsumerState<ReservationFormScreen> {
+class _ReservationFormScreenState extends ConsumerState<ReservationFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _guestNameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -41,6 +40,7 @@ class _ReservationFormScreenState
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.copy;
     final eventAsync = ref.watch(eventDetailsProvider(widget.eventId));
     final profile = ref.watch(currentProfileProvider).valueOrNull;
 
@@ -51,110 +51,210 @@ class _ReservationFormScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Conferma prenotazione'),
+        title: Text(
+          copy.text(it: 'Conferma prenotazione', en: 'Confirm reservation'),
+        ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: Center(child: LanguageToggle(compact: true)),
+          ),
+        ],
       ),
       body: eventAsync.when(
         data: (event) {
           final selectedOffer = _resolveOffer(event);
+          final maxPartySize = _maxPartySize(selectedOffer);
+          final offerUnavailable =
+              selectedOffer != null &&
+              selectedOffer.spotsLeft != null &&
+              selectedOffer.spotsLeft! <= 0;
+          if (_partySize > maxPartySize) {
+            _partySize = maxPartySize;
+          }
 
           return ResponsivePage(
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-              NightRadarHero(
-                title: event.summary.title,
-                subtitle: selectedOffer == null
-                    ? 'Richiesta accesso generico'
-                    : 'Offerta selezionata: ${selectedOffer.title}',
-                trailing: RadarChip(label: event.summary.radarLabel),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (selectedOffer != null) ...[
-                          Text(
-                            selectedOffer.title,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            selectedOffer.price == 0
-                                ? 'Ingresso free'
-                                : 'EUR ${selectedOffer.price.toStringAsFixed(0)}',
+                NightRadarHero(
+                  title: event.summary.title,
+                  subtitle: selectedOffer == null
+                      ? copy.text(
+                          it: 'Richiesta accesso generico',
+                          en: 'General access request',
+                        )
+                      : copy.text(
+                          it: 'Offerta selezionata: ${selectedOffer.title}',
+                          en: 'Selected offer: ${selectedOffer.title}',
+                        ),
+                  trailing: RadarChip(label: event.summary.radarLabel),
+                ),
+                if (AppFlavorConfig.isDemo) ...[
+                  const SizedBox(height: 12),
+                  const FlavorNoticeCard(compact: true),
+                ],
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (selectedOffer != null) ...[
+                            Text(
+                              selectedOffer.title,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              selectedOffer.price == 0
+                                  ? copy.freeEntryLabel()
+                                  : copy.priceAmount(selectedOffer.price),
+                            ),
+                            if (selectedOffer.isTableOffer &&
+                                selectedOffer.tableGuestCapacity != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                copy.text(
+                                  it: 'Tavolo per massimo ${selectedOffer.tableGuestCapacity} persone',
+                                  en: 'Table for up to ${selectedOffer.tableGuestCapacity} people',
+                                ),
+                              ),
+                            ],
+                            if (selectedOffer.showPublicAvailability &&
+                                selectedOffer.spotsLeft != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                copy.text(
+                                  it: selectedOffer.isTableOffer
+                                      ? 'Tavoli residui visibili: ${selectedOffer.spotsLeft}'
+                                      : 'Posti residui visibili: ${selectedOffer.spotsLeft}',
+                                  en: selectedOffer.isTableOffer
+                                      ? 'Visible tables left: ${selectedOffer.spotsLeft}'
+                                      : 'Visible spots left: ${selectedOffer.spotsLeft}',
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                          ],
+                          TextFormField(
+                            controller: _guestNameController,
+                            decoration: InputDecoration(
+                              labelText: copy.text(
+                                it: 'Nome referente',
+                                en: 'Lead guest name',
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().length < 2) {
+                                return copy.text(
+                                  it: 'Inserisci il nome del referente',
+                                  en: 'Enter the lead guest name',
+                                );
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 12),
-                        ],
-                        TextFormField(
-                          controller: _guestNameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Nome referente',
+                          TextFormField(
+                            controller: _phoneController,
+                            decoration: InputDecoration(
+                              labelText: copy.text(
+                                it: 'Telefono o email',
+                                en: 'Phone or email',
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return copy.text(
+                                  it: 'Inserisci un contatto',
+                                  en: 'Enter a contact',
+                                );
+                              }
+                              return null;
+                            },
                           ),
-                          validator: (value) {
-                            if (value == null || value.trim().length < 2) {
-                              return 'Inserisci il nome del referente';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _phoneController,
-                          decoration: const InputDecoration(
-                            labelText: 'Telefono o email',
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<int>(
+                            key: ValueKey(
+                              '${selectedOffer?.id ?? 'generic'}-$maxPartySize',
+                            ),
+                            initialValue: _partySize,
+                            decoration: InputDecoration(
+                              labelText: copy.text(
+                                it: 'Numero persone',
+                                en: 'Party size',
+                              ),
+                            ),
+                            items: List.generate(
+                              maxPartySize,
+                              (index) => DropdownMenuItem(
+                                value: index + 1,
+                                child: Text(copy.peopleCount(index + 1)),
+                              ),
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                _partySize = value ?? 1;
+                              });
+                            },
                           ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Inserisci un contatto';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<int>(
-                          initialValue: _partySize,
-                          decoration: const InputDecoration(
-                            labelText: 'Numero persone',
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _notesController,
+                            decoration: InputDecoration(
+                              labelText: copy.text(it: 'Note', en: 'Notes'),
+                            ),
+                            maxLines: 3,
                           ),
-                          items: List.generate(
-                            10,
-                            (index) => DropdownMenuItem(
-                              value: index + 1,
-                              child: Text('${index + 1} persone'),
+                          if (offerUnavailable) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              copy.text(
+                                it: selectedOffer.isTableOffer
+                                    ? 'Questa offerta tavolo risulta esaurita adesso.'
+                                    : 'Questa offerta risulta esaurita adesso.',
+                                en: selectedOffer.isTableOffer
+                                    ? 'This table offer is currently sold out.'
+                                    : 'This offer is currently sold out.',
+                              ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context).colorScheme.error,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ],
+                          const SizedBox(height: 18),
+                          ElevatedButton(
+                            onPressed:
+                                !AppFlavorConfig.allowMutations ||
+                                    _isSubmitting ||
+                                    offerUnavailable
+                                ? null
+                                : () => _submit(context, event, selectedOffer),
+                            child: Text(
+                              !AppFlavorConfig.allowMutations
+                                  ? copy.text(
+                                      it: 'Disponibile solo nella versione attiva',
+                                      en: 'Available only in the live version',
+                                    )
+                                  : (_isSubmitting
+                                        ? copy.text(
+                                            it: 'Invio in corso...',
+                                            en: 'Submitting...',
+                                          )
+                                        : copy.text(
+                                            it: 'Genera prenotazione e QR',
+                                            en: 'Generate reservation and QR',
+                                          )),
                             ),
                           ),
-                          onChanged: (value) {
-                            setState(() {
-                              _partySize = value ?? 1;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _notesController,
-                          decoration: const InputDecoration(
-                            labelText: 'Note',
-                          ),
-                          maxLines: 3,
-                        ),
-                        const SizedBox(height: 18),
-                        ElevatedButton(
-                          onPressed: _isSubmitting
-                              ? null
-                              : () => _submit(context, event, selectedOffer),
-                          child: Text(
-                            _isSubmitting
-                                ? 'Invio in corso...'
-                                : 'Genera prenotazione e QR',
-                          ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -164,7 +264,10 @@ class _ReservationFormScreenState
         },
         error: (error, stackTrace) => Center(
           child: EmptyStateCard(
-            title: 'Prenotazione non disponibile',
+            title: copy.text(
+              it: 'Prenotazione non disponibile',
+              en: 'Reservation unavailable',
+            ),
             message: error.toString(),
           ),
         ),
@@ -187,6 +290,19 @@ class _ReservationFormScreenState
     return null;
   }
 
+  int _maxPartySize(EventOffer? offer) {
+    if (offer == null) {
+      return 10;
+    }
+    if (offer.isTableOffer && offer.tableGuestCapacity != null) {
+      return offer.tableGuestCapacity!.clamp(1, 30);
+    }
+    if (offer.spotsLeft != null) {
+      return offer.spotsLeft!.clamp(1, 30);
+    }
+    return 10;
+  }
+
   Future<void> _submit(
     BuildContext context,
     EventDetails event,
@@ -201,7 +317,9 @@ class _ReservationFormScreenState
     });
 
     try {
-      final reservation = await ref.read(nightRadarRepositoryProvider).createReservation(
+      final reservation = await ref
+          .read(nightRadarRepositoryProvider)
+          .createReservation(
             event: event,
             offer: offer,
             guestName: _guestNameController.text.trim(),
@@ -225,9 +343,9 @@ class _ReservationFormScreenState
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) {
         setState(() {
