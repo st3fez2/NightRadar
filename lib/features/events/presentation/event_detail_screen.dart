@@ -1253,6 +1253,46 @@ class _OfferCard extends StatelessWidget {
                 ),
               ),
             ],
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (offer.showQrOnEntry)
+                  Chip(
+                    avatar: const Icon(Icons.qr_code_2_rounded, size: 18),
+                    label: Text(
+                      copy.text(it: 'QR all ingresso', en: 'QR at entry'),
+                    ),
+                  ),
+                if (offer.showSecretCodeOnEntry)
+                  Chip(
+                    avatar: const Icon(Icons.password_rounded, size: 18),
+                    label: Text(
+                      copy.text(it: 'Codice segreto', en: 'Secret code'),
+                    ),
+                  ),
+                if (offer.showListNameOnEntry)
+                  Chip(
+                    avatar: const Icon(Icons.badge_outlined, size: 18),
+                    label: Text(
+                      copy.text(
+                        it: 'Nome lista o tavolo',
+                        en: 'List or table name',
+                      ),
+                    ),
+                  ),
+                Chip(
+                  avatar: const Icon(Icons.verified_user_outlined, size: 18),
+                  label: Text(
+                    copy.text(
+                      it: 'Utente verificato o guest',
+                      en: 'Verified user or guest',
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 14),
             ElevatedButton(
               onPressed: onReserve,

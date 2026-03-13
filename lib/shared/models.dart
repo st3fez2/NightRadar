@@ -38,6 +38,22 @@ enum PhoneRequirement {
   }
 }
 
+enum GuestAccessType {
+  verifiedUser('verified_user'),
+  anonymousGuest('anonymous_guest');
+
+  const GuestAccessType(this.value);
+
+  final String value;
+
+  static GuestAccessType fromValue(String? value) {
+    return switch (value) {
+      'anonymous_guest' => GuestAccessType.anonymousGuest,
+      _ => GuestAccessType.verifiedUser,
+    };
+  }
+}
+
 class AppProfile {
   AppProfile({
     required this.id,
@@ -279,6 +295,9 @@ class EventOffer {
     this.conditions,
     this.tableGuestCapacity,
     this.showPublicAvailability = false,
+    this.showQrOnEntry = true,
+    this.showSecretCodeOnEntry = false,
+    this.showListNameOnEntry = false,
     this.reservedGuests = 0,
     this.reservedEntries = 0,
     this.spotsLeft,
@@ -310,6 +329,9 @@ class EventOffer {
   final String? conditions;
   final int? tableGuestCapacity;
   final bool showPublicAvailability;
+  final bool showQrOnEntry;
+  final bool showSecretCodeOnEntry;
+  final bool showListNameOnEntry;
   final int reservedGuests;
   final int reservedEntries;
   final int? spotsLeft;
@@ -325,6 +347,9 @@ class EventOffer {
     bool? requiresListName,
     int? tableGuestCapacity,
     bool? showPublicAvailability,
+    bool? showQrOnEntry,
+    bool? showSecretCodeOnEntry,
+    bool? showListNameOnEntry,
     int? reservedGuests,
     int? reservedEntries,
     PromoterReactionSummary? reactions,
@@ -357,6 +382,10 @@ class EventOffer {
       tableGuestCapacity: tableGuestCapacity ?? this.tableGuestCapacity,
       showPublicAvailability:
           showPublicAvailability ?? this.showPublicAvailability,
+      showQrOnEntry: showQrOnEntry ?? this.showQrOnEntry,
+      showSecretCodeOnEntry:
+          showSecretCodeOnEntry ?? this.showSecretCodeOnEntry,
+      showListNameOnEntry: showListNameOnEntry ?? this.showListNameOnEntry,
       reservedGuests: reservedGuests ?? this.reservedGuests,
       reservedEntries: reservedEntries ?? this.reservedEntries,
       spotsLeft: spotsLeft ?? this.spotsLeft,
@@ -559,11 +588,17 @@ class ReservationRecord {
     this.promoterName,
     this.guestLastName,
     this.guestPhone,
+    this.guestEmail,
     this.listName,
     this.isAnonymousEntry = false,
+    this.guestAccessType = GuestAccessType.verifiedUser,
     this.participantDetails = const [],
     this.qrToken,
     this.qrExpiresAt,
+    this.entrySecretCode,
+    this.showQrOnEntry = true,
+    this.showSecretCodeOnEntry = false,
+    this.showListNameOnEntry = false,
     this.notes,
   });
 
@@ -582,12 +617,35 @@ class ReservationRecord {
   final String? promoterName;
   final String? guestLastName;
   final String? guestPhone;
+  final String? guestEmail;
   final String? listName;
   final bool isAnonymousEntry;
+  final GuestAccessType guestAccessType;
   final List<ParticipantRecord> participantDetails;
   final String? qrToken;
   final DateTime? qrExpiresAt;
+  final String? entrySecretCode;
+  final bool showQrOnEntry;
+  final bool showSecretCodeOnEntry;
+  final bool showListNameOnEntry;
   final String? notes;
+
+  bool get isVerifiedGuest => guestAccessType == GuestAccessType.verifiedUser;
+
+  bool get canShowQrAtEntry => showQrOnEntry && qrToken != null;
+
+  bool get canShowSecretCodeAtEntry =>
+      showSecretCodeOnEntry &&
+      entrySecretCode != null &&
+      entrySecretCode!.trim().isNotEmpty;
+
+  bool get canShowAssignedListNameAtEntry =>
+      showListNameOnEntry && listName != null && listName!.trim().isNotEmpty;
+
+  bool get hasAnyEntryCredential =>
+      canShowQrAtEntry ||
+      canShowSecretCodeAtEntry ||
+      canShowAssignedListNameAtEntry;
 
   String get displayGuestName {
     if (isAnonymousEntry) {

@@ -31,8 +31,17 @@ class WalletScreen extends ConsumerWidget {
       body: reservationAsync.when(
         data: (reservation) {
           final showQr =
-              reservation.status == 'approved' ||
-              reservation.status == 'checked_in';
+              (reservation.status == 'approved' ||
+                  reservation.status == 'checked_in') &&
+              reservation.canShowQrAtEntry;
+          final showSecretCode =
+              (reservation.status == 'approved' ||
+                  reservation.status == 'checked_in') &&
+              reservation.canShowSecretCodeAtEntry;
+          final showAssignedListName =
+              (reservation.status == 'approved' ||
+                  reservation.status == 'checked_in') &&
+              reservation.canShowAssignedListNameAtEntry;
 
           return ResponsivePage(
             child: ListView(
@@ -56,6 +65,16 @@ class WalletScreen extends ConsumerWidget {
                                   it: 'Mostra questo QR all ingresso',
                                   en: 'Show this QR at the entrance',
                                 )
+                              : showSecretCode
+                              ? copy.text(
+                                  it: 'Mostra questo codice all ingresso',
+                                  en: 'Show this code at the entrance',
+                                )
+                              : showAssignedListName
+                              ? copy.text(
+                                  it: 'Mostra il nome lista assegnato all ingresso',
+                                  en: 'Show the assigned list name at the entrance',
+                                )
                               : copy.text(
                                   it: 'Prenotazione in attesa',
                                   en: 'Reservation pending',
@@ -77,6 +96,69 @@ class WalletScreen extends ConsumerWidget {
                             padding: EdgeInsets.symmetric(vertical: 30),
                             child: Icon(Icons.hourglass_top_rounded, size: 64),
                           ),
+                        if (showSecretCode) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF7F1EA),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: const Color(0xFFE0D2C4),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  copy.text(
+                                    it: 'Codice segreto',
+                                    en: 'Secret code',
+                                  ),
+                                  style: Theme.of(context).textTheme.labelLarge,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  reservation.entrySecretCode ?? '',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.headlineMedium,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        if (showAssignedListName) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF7F1EA),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: const Color(0xFFE0D2C4),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  copy.text(
+                                    it: 'Nome lista o tavolo',
+                                    en: 'List or table name',
+                                  ),
+                                  style: Theme.of(context).textTheme.labelLarge,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  reservation.listName ?? '',
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 14),
                         Text(
                           copy.longDateTime(reservation.startsAt),
@@ -85,10 +167,8 @@ class WalletScreen extends ConsumerWidget {
                         const SizedBox(height: 8),
                         Text(
                           copy.text(
-                            it:
-                                'Referente: ${reservation.guestName}  ·  Persone: ${reservation.partySize}',
-                            en:
-                                'Lead guest: ${reservation.guestName}  ·  People: ${reservation.partySize}',
+                            it: 'Referente: ${reservation.guestName}  ·  Persone: ${reservation.partySize}',
+                            en: 'Lead guest: ${reservation.guestName}  ·  People: ${reservation.partySize}',
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -104,6 +184,21 @@ class WalletScreen extends ConsumerWidget {
                         if (reservation.promoterName != null) ...[
                           const SizedBox(height: 8),
                           Text('PR: ${reservation.promoterName}'),
+                        ],
+                        const SizedBox(height: 8),
+                        Text(
+                          copy.guestAccessLabel(reservation.guestAccessType),
+                        ),
+                        if (reservation.guestEmail?.trim().isNotEmpty ==
+                            true) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            copy.text(
+                              it: 'Ricevuta: ${reservation.guestEmail}',
+                              en: 'Receipt: ${reservation.guestEmail}',
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ],
                       ],
                     ),
@@ -122,7 +217,10 @@ class WalletScreen extends ConsumerWidget {
         },
         error: (error, stackTrace) => Center(
           child: EmptyStateCard(
-            title: copy.text(it: 'Wallet non disponibile', en: 'Wallet unavailable'),
+            title: copy.text(
+              it: 'Wallet non disponibile',
+              en: 'Wallet unavailable',
+            ),
             message: error.toString(),
           ),
         ),

@@ -35,7 +35,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == '/' ||
           isLegalRoute ||
           isAuthRoute ||
-          state.fullPath == '/event/:eventId';
+          state.fullPath == '/event/:eventId' ||
+          state.fullPath == '/event/:eventId/reserve';
 
       if (!localLegalAccepted && !isLegalRoute) {
         final from = Uri.encodeComponent(state.uri.toString());
@@ -61,9 +62,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
       GoRoute(
         path: '/legal',
-        builder: (context, state) => LegalConsentScreen(
-          fromPath: state.uri.queryParameters['from'],
-        ),
+        builder: (context, state) =>
+            LegalConsentScreen(fromPath: state.uri.queryParameters['from']),
       ),
       GoRoute(path: '/', builder: (context, state) => const PublicHomeScreen()),
       GoRoute(path: '/app', builder: (context, state) => const AppHomeScreen()),
@@ -118,11 +118,10 @@ class AppHomeScreen extends ConsumerWidget {
           _ => const UserHomeScreen(),
         };
       },
-      error: (error, stackTrace) =>
-          _RouteStatusView(
-            title: copy.text(it: 'Errore profilo', en: 'Profile error'),
-            message: error.toString(),
-          ),
+      error: (error, stackTrace) => _RouteStatusView(
+        title: copy.text(it: 'Errore profilo', en: 'Profile error'),
+        message: error.toString(),
+      ),
       loading: () => _RouteStatusView(
         title: 'NightRadar',
         message: copy.text(
@@ -144,10 +143,8 @@ class _LegacyRoleScreen extends StatelessWidget {
     return _RouteStatusView(
       title: copy.text(it: 'Area locale rimossa', en: 'Venue area removed'),
       message: copy.text(
-        it:
-            'NightRadar ora e solo per utenti e PR. I locali ricevono le liste finali via condivisione esterna, senza dashboard dedicata nell app.',
-        en:
-            'NightRadar is now only for users and promoters. Venues receive final lists via external sharing, without a dedicated in-app dashboard.',
+        it: 'NightRadar ora e solo per utenti e PR. I locali ricevono le liste finali via condivisione esterna, senza dashboard dedicata nell app.',
+        en: 'NightRadar is now only for users and promoters. Venues receive final lists via external sharing, without a dedicated in-app dashboard.',
       ),
     );
   }

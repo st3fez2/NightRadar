@@ -481,7 +481,7 @@ class PromoterDashboardScreen extends ConsumerWidget {
                               child: ListTile(
                                 title: Text(reservation.displayGuestName),
                                 subtitle: Text(
-                                  '${reservation.eventTitle}  ·  ${reservation.partySize} pax',
+                                  '${reservation.eventTitle}  ·  ${reservation.partySize} pax  ·  ${copy.guestAccessLabel(reservation.guestAccessType)}',
                                 ),
                                 trailing: RadarChip(label: reservation.status),
                               ),
@@ -2185,6 +2185,9 @@ class PromoterDashboardScreen extends ConsumerWidget {
     var allowAnonymousEntry = initialOffer?.allowAnonymousEntry ?? false;
     var requiresListName = initialOffer?.requiresListName ?? false;
     var showPublicAvailability = initialOffer?.showPublicAvailability ?? false;
+    var showQrOnEntry = initialOffer?.showQrOnEntry ?? true;
+    var showSecretCodeOnEntry = initialOffer?.showSecretCodeOnEntry ?? false;
+    var showListNameOnEntry = initialOffer?.showListNameOnEntry ?? false;
     var isSaving = false;
     String? errorText;
 
@@ -2392,6 +2395,51 @@ class PromoterDashboardScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: showQrOnEntry,
+                    onChanged: (value) {
+                      setState(() {
+                        showQrOnEntry = value;
+                      });
+                    },
+                    title: Text(
+                      copy.text(
+                        it: 'Mostra QR all ingresso',
+                        en: 'Show QR at the entrance',
+                      ),
+                    ),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: showSecretCodeOnEntry,
+                    onChanged: (value) {
+                      setState(() {
+                        showSecretCodeOnEntry = value;
+                      });
+                    },
+                    title: Text(
+                      copy.text(
+                        it: 'Mostra codice segreto',
+                        en: 'Show secret code',
+                      ),
+                    ),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: showListNameOnEntry,
+                    onChanged: (value) {
+                      setState(() {
+                        showListNameOnEntry = value;
+                      });
+                    },
+                    title: Text(
+                      copy.text(
+                        it: 'Mostra nome lista o tavolo',
+                        en: 'Show list or table name',
+                      ),
+                    ),
+                  ),
                   TextFormField(
                     controller: descriptionController,
                     decoration: InputDecoration(
@@ -2443,6 +2491,18 @@ class PromoterDashboardScreen extends ConsumerWidget {
                         isSaving = true;
                         errorText = null;
                       });
+                      if (!showQrOnEntry &&
+                          !showSecretCodeOnEntry &&
+                          !showListNameOnEntry) {
+                        setState(() {
+                          isSaving = false;
+                          errorText = copy.text(
+                            it: 'Seleziona almeno un elemento visibile all ingresso: QR, codice o nome lista.',
+                            en: 'Select at least one entrance credential: QR, code, or list name.',
+                          );
+                        });
+                        return;
+                      }
                       try {
                         final repository = ref.read(
                           nightRadarRepositoryProvider,
@@ -2468,6 +2528,9 @@ class PromoterDashboardScreen extends ConsumerWidget {
                             allowAnonymousEntry: allowAnonymousEntry,
                             requiresListName: requiresListName,
                             showPublicAvailability: showPublicAvailability,
+                            showQrOnEntry: showQrOnEntry,
+                            showSecretCodeOnEntry: showSecretCodeOnEntry,
+                            showListNameOnEntry: showListNameOnEntry,
                           );
                         } else {
                           await repository.updateEventOffer(
@@ -2490,6 +2553,9 @@ class PromoterDashboardScreen extends ConsumerWidget {
                             allowAnonymousEntry: allowAnonymousEntry,
                             requiresListName: requiresListName,
                             showPublicAvailability: showPublicAvailability,
+                            showQrOnEntry: showQrOnEntry,
+                            showSecretCodeOnEntry: showSecretCodeOnEntry,
+                            showListNameOnEntry: showListNameOnEntry,
                           );
                         }
                         ref.invalidate(promoterDashboardProvider);
@@ -2951,11 +3017,24 @@ class _PromoterEventCard extends StatelessWidget {
                     (reservation) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Text(
-                              reservation.displayGuestName,
-                              style: Theme.of(context).textTheme.bodyLarge,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  reservation.displayGuestName,
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  copy.guestAccessLabel(
+                                    reservation.guestAccessType,
+                                  ),
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
                             ),
                           ),
                           Text(copy.paxCount(reservation.partySize)),
@@ -3056,6 +3135,24 @@ class _PromoterEventCard extends StatelessWidget {
     }
     if (offer.showPublicAvailability) {
       parts.add(copy.text(it: 'residuo pubblico', en: 'public availability'));
+    }
+    final entryParts = <String>[];
+    if (offer.showQrOnEntry) {
+      entryParts.add('QR');
+    }
+    if (offer.showSecretCodeOnEntry) {
+      entryParts.add(copy.text(it: 'codice', en: 'code'));
+    }
+    if (offer.showListNameOnEntry) {
+      entryParts.add(copy.text(it: 'nome lista', en: 'list name'));
+    }
+    if (entryParts.isNotEmpty) {
+      parts.add(
+        copy.text(
+          it: 'ingresso ${entryParts.join('/')}',
+          en: 'entry ${entryParts.join('/')}',
+        ),
+      );
     }
     return parts.join(' · ');
   }

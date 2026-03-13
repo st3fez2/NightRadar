@@ -145,10 +145,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     en: 'Public QR always available',
                   ),
                   subtitle: copy.text(
-                    it:
-                        'Dalla landing puoi condividere il progetto, aprire il sito live o scaricare il QR senza autenticarti.',
-                    en:
-                        'From the landing page you can share the project, open the live site, or download the QR without signing in.',
+                    it: 'Dalla landing puoi condividere il progetto, aprire il sito live o scaricare il QR senza autenticarti.',
+                    en: 'From the landing page you can share the project, open the live site, or download the QR without signing in.',
                   ),
                 ),
                 if (AppFlavorConfig.isDemo) ...[
@@ -193,10 +191,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             const SizedBox(height: 6),
                             Text(
                               copy.text(
-                                it:
-                                    'Prima di usare NightRadar chiediamo un consenso iniziale dedicato, cosi i flussi utenti e PR restano coperti anche lato web mobile.',
-                                en:
-                                    'Before using NightRadar we ask for a dedicated initial consent, so user and promoter flows stay covered on mobile web too.',
+                                it: 'Prima di usare NightRadar chiediamo un consenso iniziale dedicato, cosi i flussi utenti e PR restano coperti anche lato web mobile.',
+                                en: 'Before using NightRadar we ask for a dedicated initial consent, so user and promoter flows stay covered on mobile web too.',
                               ),
                               style: theme.textTheme.bodyMedium,
                             ),
@@ -252,6 +248,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         children: [
           _buildModeChips(),
           const SizedBox(height: 18),
+          if (!AppFlavorConfig.isDemo && !_isSignUp) ...[
+            _buildGoogleAccessCard(context),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(child: Divider(color: theme.dividerColor)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Text(copy.text(it: 'oppure', en: 'or')),
+                ),
+                Expanded(child: Divider(color: theme.dividerColor)),
+              ],
+            ),
+            const SizedBox(height: 18),
+          ],
           if (_isSignUp) ...[
             TextFormField(
               controller: _fullNameController,
@@ -331,10 +342,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             const SizedBox(height: 10),
             Text(
               copy.text(
-                it:
-                    'Se il progetto richiede conferma email, dopo la registrazione ti porto direttamente alla schermata di verifica.',
-                en:
-                    'If the project requires email confirmation, after sign-up I take you straight to the verification screen.',
+                it: 'Se il progetto richiede conferma email, dopo la registrazione ti porto direttamente alla schermata di verifica.',
+                en: 'If the project requires email confirmation, after sign-up I take you straight to the verification screen.',
+              ),
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              copy.text(
+                it: 'Per i PR il percorso consigliato resta Google, cosi il locale e gli altri PR vedono un profilo piu affidabile.',
+                en: 'For promoters the recommended path stays Google, so venues and other promoters see a more reliable profile.',
               ),
               style: theme.textTheme.bodySmall,
             ),
@@ -376,6 +393,53 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
+  Widget _buildGoogleAccessCard(BuildContext context) {
+    final copy = context.copy;
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F1EA),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE0D2C4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            copy.text(
+              it: 'Accesso Google per PR e utenti verificati',
+              en: 'Google access for promoters and verified users',
+            ),
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            copy.text(
+              it: 'Consigliato per i PR. Gli utenti che entrano con Google risultano piu affidabili nella lista rispetto al guest anonimo.',
+              en: 'Recommended for promoters. Users entering with Google look more reliable on the list than anonymous guests.',
+            ),
+          ),
+          const SizedBox(height: 14),
+          ElevatedButton.icon(
+            onPressed: _isSubmitting ? null : _continueWithGoogle,
+            icon: const Icon(Icons.account_circle_outlined),
+            label: Text(
+              _isSubmitting
+                  ? copy.text(it: 'Apro Google...', en: 'Opening Google...')
+                  : copy.text(
+                      it: 'Continua con Google',
+                      en: 'Continue with Google',
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmailPendingCard(BuildContext context) {
     final copy = context.copy;
     final theme = Theme.of(context);
@@ -390,10 +454,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         const SizedBox(height: 10),
         Text(
           copy.text(
-            it:
-                'Abbiamo preparato il tuo account, ma per entrare dobbiamo prima confermare l indirizzo email.',
-            en:
-                'We prepared your account, but before signing in we need to confirm your email address.',
+            it: 'Abbiamo preparato il tuo account, ma per entrare dobbiamo prima confermare l indirizzo email.',
+            en: 'We prepared your account, but before signing in we need to confirm your email address.',
           ),
           style: theme.textTheme.bodyLarge,
         ),
@@ -478,16 +540,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           _buildModeChips(),
           const SizedBox(height: 18),
           Text(
-            copy.text(it: 'Richiesta account PR', en: 'Promoter account request'),
+            copy.text(
+              it: 'Richiesta account PR',
+              en: 'Promoter account request',
+            ),
             style: theme.textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
           Text(
             copy.text(
-              it:
-                  'Mandaci i tuoi dati e apriamo il canale PR senza confondere il flusso utente normale.',
-              en:
-                  'Send us your details and we will open the promoter channel without confusing the normal user flow.',
+              it: 'Mandaci i tuoi dati e apriamo il canale PR senza confondere il flusso utente normale.',
+              en: 'Send us your details and we will open the promoter channel without confusing the normal user flow.',
             ),
           ),
           const SizedBox(height: 16),
@@ -601,10 +664,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         const SizedBox(height: 10),
         Text(
           copy.text(
-            it:
-                'Abbiamo salvato la tua richiesta PR. Ti contatteremo usando i dati che hai lasciato, senza interrompere il flusso utenti standard.',
-            en:
-                'We saved your promoter request. We will contact you using the details you left, without interrupting the standard user flow.',
+            it: 'Abbiamo salvato la tua richiesta PR. Ti contatteremo usando i dati che hai lasciato, senza interrompere il flusso utenti standard.',
+            en: 'We saved your promoter request. We will contact you using the details you left, without interrupting the standard user flow.',
           ),
         ),
         const SizedBox(height: 12),
@@ -668,7 +729,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           ),
         ChoiceChip(
           label: Text(
-            copy.text(it: 'Richiedi account PR', en: 'Request promoter account'),
+            copy.text(
+              it: 'Richiedi account PR',
+              en: 'Request promoter account',
+            ),
           ),
           selected: _pane == _AuthPane.promoterRequest,
           onSelected: (_) => _setPane(_AuthPane.promoterRequest),
@@ -853,6 +917,33 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
+  Future<void> _continueWithGoogle() async {
+    setState(() {
+      _isSubmitting = true;
+      _errorText = null;
+    });
+
+    try {
+      final redirectTo = Uri.base.replace(queryParameters: {}).toString();
+      await ref
+          .read(nightRadarRepositoryProvider)
+          .signInWithGoogle(redirectTo: redirectTo);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _errorText = _humanizeError(error);
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
   String _heroBadgeLabel() {
     final copy = context.copy;
     return switch (_pane) {
@@ -868,66 +959,49 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String _heroTitle() {
     final copy = context.copy;
     return switch (_pane) {
-      _AuthPane.promoterRequest =>
-        copy.text(
-          it: 'Apri il canale PR senza rompere il percorso semplice per gli utenti.',
-          en: 'Open the promoter channel without breaking the simple path for users.',
-        ),
-      _AuthPane.promoterRequestSent =>
-        copy.text(
-          it: 'La tua richiesta PR e gia entrata nel radar operativo.',
-          en: 'Your promoter request is already inside the operating radar.',
-        ),
-      _AuthPane.emailPending =>
-        copy.text(
-          it: 'Un ultimo passaggio e poi NightRadar e pronto per te.',
-          en: 'One last step and NightRadar is ready for you.',
-        ),
-      _ =>
-        copy.text(
-          it: 'Scopri le serate, riempi le liste e manda al locale un riepilogo pronto.',
-          en: 'Discover events, fill lists, and send the venue a ready summary.',
-        ),
+      _AuthPane.promoterRequest => copy.text(
+        it: 'Apri il canale PR senza rompere il percorso semplice per gli utenti.',
+        en: 'Open the promoter channel without breaking the simple path for users.',
+      ),
+      _AuthPane.promoterRequestSent => copy.text(
+        it: 'La tua richiesta PR e gia entrata nel radar operativo.',
+        en: 'Your promoter request is already inside the operating radar.',
+      ),
+      _AuthPane.emailPending => copy.text(
+        it: 'Un ultimo passaggio e poi NightRadar e pronto per te.',
+        en: 'One last step and NightRadar is ready for you.',
+      ),
+      _ => copy.text(
+        it: 'Scopri le serate, riempi le liste e manda al locale un riepilogo pronto.',
+        en: 'Discover events, fill lists, and send the venue a ready summary.',
+      ),
     };
   }
 
   String _heroSubtitle() {
     final copy = context.copy;
     return switch (_pane) {
-      _AuthPane.promoterRequest =>
-        copy.text(
-          it:
-              'La registrazione normale resta per gli utenti. Per il ruolo PR raccogliamo una richiesta dedicata, piu chiara e gestibile.',
-          en:
-              'Standard sign-up stays for users. For the promoter role we collect a dedicated request that is clearer and easier to manage.',
-        ),
-      _AuthPane.promoterRequestSent =>
-        copy.text(
-          it:
-              'Adesso puoi anche usare il login standard oppure attendere il contatto del team per l attivazione PR.',
-          en:
-              'Now you can also use the standard login or wait for the team to contact you for promoter activation.',
-        ),
-      _AuthPane.emailPending =>
-        copy.text(
-          it:
-              'Se il progetto richiede verifica email, resti guidato qui con reinvio e accesso rapido appena confermi.',
-          en:
-              'If the project requires email verification, you stay guided here with resend and quick access as soon as you confirm.',
-        ),
+      _AuthPane.promoterRequest => copy.text(
+        it: 'La registrazione normale resta per gli utenti. Per il ruolo PR raccogliamo una richiesta dedicata e poi l accesso consigliato passa da Google.',
+        en: 'Standard sign-up stays for users. For the promoter role we collect a dedicated request and then the recommended access goes through Google.',
+      ),
+      _AuthPane.promoterRequestSent => copy.text(
+        it: 'Quando il profilo PR sara attivo potrai entrare con Google usando la stessa email condivisa nella richiesta.',
+        en: 'When the promoter profile is active you can sign in with Google using the same email shared in the request.',
+      ),
+      _AuthPane.emailPending => copy.text(
+        it: 'Se il progetto richiede verifica email, resti guidato qui con reinvio e accesso rapido appena confermi.',
+        en: 'If the project requires email verification, you stay guided here with resend and quick access as soon as you confirm.',
+      ),
       _ =>
         AppFlavorConfig.isDemo
             ? copy.text(
-                it:
-                    'Questa demo e pensata per esplorare utenti e PR in modalita read-only. Per operazioni reali usa la versione attiva.',
-                en:
-                    'This demo is designed to explore users and promoters in read-only mode. For real operations use the live version.',
+                it: 'Questa demo e pensata per esplorare utenti e PR in modalita read-only. Per operazioni reali usa la versione attiva.',
+                en: 'This demo is designed to explore users and promoters in read-only mode. For real operations use the live version.',
               )
             : copy.text(
-                it:
-                    'Accedi come utente o richiedi account PR. I locali ricevono solo i dati finali, senza lato app dedicato.',
-                en:
-                    'Sign in as a user or request a promoter account. Venues receive only final data, without a dedicated app side.',
+                it: 'Accedi come utente o richiedi account PR. I locali ricevono solo i dati finali, senza lato app dedicato.',
+                en: 'Sign in as a user or request a promoter account. Venues receive only final data, without a dedicated app side.',
               ),
     };
   }

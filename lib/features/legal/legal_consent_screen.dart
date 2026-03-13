@@ -59,12 +59,12 @@ class _LegalConsentScreenState extends ConsumerState<LegalConsentScreen> {
           );
     final subtitle = signedIn
         ? copy.text(
-            it: 'Salviamo il consenso sia sul dispositivo sia sul profilo, cosi resti operativo senza buchi legali nei flussi utente e PR, inclusi QR, liste ed export.',
-            en: 'We save consent both on the device and on the profile, so user and promoter flows stay operational without legal gaps, including QR passes, lists, and exports.',
+            it: 'Salviamo il consenso sul dispositivo e sul profilo, cosi i flussi utente e PR restano allineati.',
+            en: 'We save consent on both the device and the profile, so user and promoter flows stay aligned.',
           )
         : copy.text(
-            it: 'La landing pubblica, l area utenti e gli strumenti PR si aprono solo dopo questa conferma iniziale.',
-            en: 'The public landing, user area, and promoter tools open only after this initial confirmation.',
+            it: 'La landing pubblica, l area utenti e gli strumenti PR si aprono solo dopo questa conferma.',
+            en: 'The public landing, user area, and promoter tools open only after this confirmation.',
           );
 
     return Scaffold(
@@ -155,8 +155,8 @@ class _LegalConsentScreenState extends ConsumerState<LegalConsentScreen> {
                   icon: Icons.gpp_good_rounded,
                   title: copy.text(it: 'Perche lo chiediamo', en: 'Why we ask'),
                   description: copy.text(
-                    it: 'NightRadar gestisce guest list, QR, dati contatto, richieste ai PR, export verso i locali e alcune preferenze salvate localmente. Prima di usare il servizio, esplicitiamo limiti del prodotto e uso dei dati.',
-                    en: 'NightRadar handles guest lists, QR passes, contact data, promoter requests, exports to venues, and some preferences stored locally. Before using the service, we explain product limits and data usage.',
+                    it: 'NightRadar gestisce liste, accessi, contatti, richieste ai PR ed export verso i locali. Prima di usare il servizio, chiarisce limiti del prodotto e uso dei dati.',
+                    en: 'NightRadar handles lists, entry flows, contacts, promoter requests, and exports to venues. Before you use the service, it clarifies product limits and data usage.',
                   ),
                 ),
                 const SizedBox(height: 18),

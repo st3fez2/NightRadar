@@ -32,7 +32,8 @@ String buildPromoterEventPromoText({
         it: 'Eta minima: ${copy.minimumAgeLabel(event.minimumAge)}',
         en: 'Minimum age: ${copy.minimumAgeLabel(event.minimumAge)}',
       ),
-    if (event.promoCaption?.trim().isNotEmpty == true) event.promoCaption!.trim(),
+    if (event.promoCaption?.trim().isNotEmpty == true)
+      event.promoCaption!.trim(),
     if (offers.isNotEmpty)
       copy.text(
         it: 'Liste attive: ${offers.map((offer) => offer.title).join(', ')}',
@@ -64,7 +65,9 @@ String buildVenueDeliveryExport({
     0,
     (sum, reservation) => sum + reservation.partySize,
   );
-  final openLists = offers.where((offer) => offer.spotsLeft == null || offer.spotsLeft! > 0).length;
+  final openLists = offers
+      .where((offer) => offer.spotsLeft == null || offer.spotsLeft! > 0)
+      .length;
   final baseList = buildGuestListExport(
     copy: copy,
     profile: profile,
@@ -84,10 +87,7 @@ String buildVenueDeliveryExport({
       en: 'Date: ${formatter.format(event.startsAt)}',
     ),
     'PR: ${profile.fullName}',
-    copy.text(
-      it: 'Liste aperte: $openLists',
-      en: 'Open lists: $openLists',
-    ),
+    copy.text(it: 'Liste aperte: $openLists', en: 'Open lists: $openLists'),
     copy.text(
       it: 'Nominativi conferiti: ${reservations.length}',
       en: 'Delivered guest entries: ${reservations.length}',
@@ -135,10 +135,7 @@ Future<Uint8List> buildVenueDeliveryPdf({
       build: (context) => [
         pw.Text(
           'NightRadar',
-          style: pw.TextStyle(
-            fontSize: 22,
-            fontWeight: pw.FontWeight.bold,
-          ),
+          style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
         ),
         pw.SizedBox(height: 6),
         pw.Text(event.title, style: pw.TextStyle(fontSize: 18)),
@@ -156,16 +153,39 @@ Future<Uint8List> buildVenueDeliveryPdf({
           spacing: 8,
           runSpacing: 8,
           children: [
-            _pdfBadge(copy.text(it: 'Liste: ${offers.length}', en: 'Lists: ${offers.length}')),
-            _pdfBadge(copy.text(it: 'Nominativi: ${reservations.length}', en: 'Entries: ${reservations.length}')),
-            _pdfBadge(copy.text(it: 'Persone: $totalGuests', en: 'People: $totalGuests')),
-            _pdfBadge(copy.text(it: 'Inbox: ${contactRequests.length}', en: 'Inbox: ${contactRequests.length}')),
+            _pdfBadge(
+              copy.text(
+                it: 'Liste: ${offers.length}',
+                en: 'Lists: ${offers.length}',
+              ),
+            ),
+            _pdfBadge(
+              copy.text(
+                it: 'Nominativi: ${reservations.length}',
+                en: 'Entries: ${reservations.length}',
+              ),
+            ),
+            _pdfBadge(
+              copy.text(
+                it: 'Persone: $totalGuests',
+                en: 'People: $totalGuests',
+              ),
+            ),
+            _pdfBadge(
+              copy.text(
+                it: 'Inbox: ${contactRequests.length}',
+                en: 'Inbox: ${contactRequests.length}',
+              ),
+            ),
           ],
         ),
         pw.SizedBox(height: 16),
         if (offers.isNotEmpty) ...[
           pw.Text(
-            copy.text(it: 'Liste e tavoli attivi', en: 'Active lists and tables'),
+            copy.text(
+              it: 'Liste e tavoli attivi',
+              en: 'Active lists and tables',
+            ),
             style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 6),
@@ -192,43 +212,52 @@ Future<Uint8List> buildVenueDeliveryPdf({
             ),
           )
         else
-          ...reservations.asMap().entries.map(
-            (entry) {
-              final reservation = entry.value;
-              final index = entry.key + 1;
-              final details = <String>[
-                '$index. ${reservation.displayGuestName}',
-                '${reservation.partySize} pax',
-                reservation.status.toUpperCase(),
-                if (reservation.offerTitle?.trim().isNotEmpty == true)
-                  reservation.offerTitle!.trim(),
-              ];
-              return pw.Padding(
-                padding: const pw.EdgeInsets.only(bottom: 6),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(details.join(' - ')),
-                    if (reservation.participantDetails.isNotEmpty)
-                      ...reservation.participantDetails.map(
-                        (participant) => pw.Padding(
-                          padding: const pw.EdgeInsets.only(left: 12, top: 2),
-                          child: pw.Text(
-                            [
-                              participant.firstName,
-                              if (participant.lastName?.trim().isNotEmpty == true)
-                                participant.lastName!.trim(),
-                              if (participant.phone?.trim().isNotEmpty == true)
-                                participant.phone!.trim(),
-                            ].join(' - '),
-                          ),
+          ...reservations.asMap().entries.map((entry) {
+            final reservation = entry.value;
+            final index = entry.key + 1;
+            final details = <String>[
+              '$index. ${reservation.displayGuestName}',
+              '${reservation.partySize} pax',
+              reservation.status.toUpperCase(),
+              copy.guestAccessLabel(reservation.guestAccessType),
+              if (reservation.offerTitle?.trim().isNotEmpty == true)
+                reservation.offerTitle!.trim(),
+            ];
+            return pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 6),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(details.join(' - ')),
+                  if (reservation.participantDetails.isNotEmpty)
+                    ...reservation.participantDetails.map(
+                      (participant) => pw.Padding(
+                        padding: const pw.EdgeInsets.only(left: 12, top: 2),
+                        child: pw.Text(
+                          [
+                            participant.firstName,
+                            if (participant.lastName?.trim().isNotEmpty == true)
+                              participant.lastName!.trim(),
+                            if (participant.phone?.trim().isNotEmpty == true)
+                              participant.phone!.trim(),
+                          ].join(' - '),
                         ),
                       ),
-                  ],
-                ),
-              );
-            },
-          ),
+                    ),
+                  if (reservation.guestEmail?.trim().isNotEmpty == true)
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.only(left: 12, top: 2),
+                      child: pw.Text(
+                        copy.text(
+                          it: 'Ricevuta: ${reservation.guestEmail!.trim()}',
+                          en: 'Receipt: ${reservation.guestEmail!.trim()}',
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          }),
       ],
     ),
   );

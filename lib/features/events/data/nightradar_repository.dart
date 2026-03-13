@@ -17,16 +17,20 @@ class NightRadarRepository {
       'id, event_id, promoter_id, type, title, description, price, capacity_total, valid_until, '
       'conditions, collect_last_name, phone_requirement, allow_anonymous_entry, '
       'table_guest_capacity, show_public_availability, '
+      'show_qr_on_entry, show_secret_code_on_entry, show_list_name_on_entry, '
       'requires_list_name, promoter:promoters!event_offers_promoter_id_fkey('
       'id, display_name, rating, bio, is_verified, avatar_url, public_phone, public_email, '
       'instagram_handle, tiktok_handle)';
   static const _reservationSelect =
       'id, event_id, offer_id, guest_name, guest_last_name, guest_phone, '
       'guest_email, list_name, is_anonymous_entry, participant_details, '
-      'party_size, status, qr_token, qr_expires_at, notes, '
+      'guest_access_type, party_size, status, qr_token, qr_expires_at, '
+      'entry_secret_code, notes, '
       'event:events!reservations_event_id_fkey(id, title, starts_at, '
       'venue:venues!events_venue_id_fkey(name, city)), '
-      'offer:event_offers!reservations_offer_id_fkey(id, title, type), '
+      'offer:event_offers!reservations_offer_id_fkey('
+      'id, title, type, show_qr_on_entry, show_secret_code_on_entry, show_list_name_on_entry'
+      '), '
       'promoter:promoters!reservations_promoter_id_fkey(display_name)';
   static const _contactRequestSelect =
       'id, event_id, promoter_id, offer_id, requester_profile_id, requester_name, '
@@ -42,6 +46,31 @@ class NightRadarRepository {
     required String password,
   }) {
     return _client.auth.signInWithPassword(email: email, password: password);
+  }
+
+  Future<void> signInWithGoogle({String? redirectTo}) async {
+    _ensureMutationsAllowed(
+      'La demo non consente nuovi accessi Google. Usa gli account demo.',
+    );
+
+    final launched = await _client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: redirectTo,
+    );
+
+    if (!launched) {
+      throw const AuthException('Impossibile aprire il login Google');
+    }
+  }
+
+  Future<AuthResponse> signInAnonymously() {
+    _ensureMutationsAllowed(
+      'La demo non consente accessi guest. Usa la versione attiva.',
+    );
+
+    return _client.auth.signInAnonymously(
+      data: {'full_name': 'NightRadar Guest'},
+    );
   }
 
   Future<AuthResponse> signUp({
@@ -274,6 +303,7 @@ class NightRadarRepository {
     required String phone,
     required int partySize,
     String? guestLastName,
+    String? receiptEmail,
     String? listName,
     bool isAnonymousEntry = false,
     List<ParticipantRecord> participantDetails = const [],
@@ -283,7 +313,8 @@ class NightRadarRepository {
       'Le prenotazioni sono bloccate nella demo. Usa la versione attiva.',
     );
 
-    final profile = await getCurrentProfile();
+    final user = currentUser;
+    final profile = await _waitForCurrentProfile();
     if (profile == null) {
       throw const AuthException('Utente non autenticato');
     }
@@ -302,9 +333,12 @@ class NightRadarRepository {
           'guest_name': guestName,
           'guest_last_name': guestLastName,
           'guest_phone': phone,
-          'guest_email': profile.email,
+          'guest_email': receiptEmail ?? profile.email,
           'list_name': listName,
           'is_anonymous_entry': isAnonymousEntry,
+          'guest_access_type': user?.isAnonymous == true
+              ? GuestAccessType.anonymousGuest.value
+              : GuestAccessType.verifiedUser.value,
           'participant_details': participantDetails
               .map((participant) => participant.toMap())
               .toList(),
@@ -322,7 +356,36 @@ class NightRadarRepository {
         .select('id')
         .single();
 
-    return fetchReservationById(inserted['id'] as String);
+    final reservation = await fetchReservationById(inserted['id'] as String);
+    final email = reservation.guestEmail?.trim();
+    if (email != null && email.isNotEmpty) {
+      try {
+        await _client.functions.invoke(
+          'send-reservation-receipt-email',
+          body: {
+            'toEmail': email,
+            'guestName': reservation.displayGuestName,
+            'eventTitle': reservation.eventTitle,
+            'venueName': reservation.venueName,
+            'city': reservation.city,
+            'startsAt': reservation.startsAt.toUtc().toIso8601String(),
+            'offerTitle': reservation.offerTitle,
+            'partySize': reservation.partySize,
+            'listName': reservation.listName,
+            'qrToken': reservation.canShowQrAtEntry
+                ? reservation.qrToken
+                : null,
+            'entrySecretCode': reservation.canShowSecretCodeAtEntry
+                ? reservation.entrySecretCode
+                : null,
+            'showAssignedListName': reservation.canShowAssignedListNameAtEntry,
+            'guestAccessType': reservation.guestAccessType.value,
+          },
+        );
+      } catch (_) {}
+    }
+
+    return reservation;
   }
 
   Future<List<ReservationRecord>> fetchMyReservations() async {
@@ -510,6 +573,7 @@ class NightRadarRepository {
       'guest_phone': phone,
       'list_name': listName,
       'is_anonymous_entry': isAnonymousEntry,
+      'guest_access_type': GuestAccessType.anonymousGuest.value,
       'participant_details': participantDetails
           .map((participant) => participant.toMap())
           .toList(),
@@ -698,6 +762,9 @@ class NightRadarRepository {
     bool allowAnonymousEntry = false,
     bool requiresListName = false,
     bool showPublicAvailability = false,
+    bool showQrOnEntry = true,
+    bool showSecretCodeOnEntry = false,
+    bool showListNameOnEntry = false,
   }) async {
     _ensureMutationsAllowed('La demo non consente di aprire nuove liste.');
 
@@ -709,7 +776,7 @@ class NightRadarRepository {
     }
 
     await _client.rpc(
-      'promoter_upsert_event_offer_v2',
+      'promoter_upsert_event_offer_v3',
       params: {
         'p_event_id': eventId,
         'p_title': title,
@@ -725,6 +792,9 @@ class NightRadarRepository {
         'p_allow_anonymous_entry': allowAnonymousEntry,
         'p_requires_list_name': requiresListName,
         'p_show_public_availability': showPublicAvailability,
+        'p_show_qr_on_entry': showQrOnEntry,
+        'p_show_secret_code_on_entry': showSecretCodeOnEntry,
+        'p_show_list_name_on_entry': showListNameOnEntry,
       },
     );
   }
@@ -744,11 +814,14 @@ class NightRadarRepository {
     bool allowAnonymousEntry = false,
     bool requiresListName = false,
     bool showPublicAvailability = false,
+    bool showQrOnEntry = true,
+    bool showSecretCodeOnEntry = false,
+    bool showListNameOnEntry = false,
   }) {
     _ensureMutationsAllowed('La demo non consente di modificare le liste.');
 
     return _client.rpc(
-      'promoter_upsert_event_offer_v2',
+      'promoter_upsert_event_offer_v3',
       params: {
         'p_offer_id': offerId,
         'p_title': title,
@@ -764,6 +837,9 @@ class NightRadarRepository {
         'p_allow_anonymous_entry': allowAnonymousEntry,
         'p_requires_list_name': requiresListName,
         'p_show_public_availability': showPublicAvailability,
+        'p_show_qr_on_entry': showQrOnEntry,
+        'p_show_secret_code_on_entry': showSecretCodeOnEntry,
+        'p_show_list_name_on_entry': showListNameOnEntry,
       },
     );
   }
@@ -942,8 +1018,17 @@ class NightRadarRepository {
       offerType: offer?['type'] as String?,
       qrToken: row['qr_token'] as String?,
       qrExpiresAt: _parseDateTime(row['qr_expires_at'] as String?),
+      entrySecretCode: row['entry_secret_code'] as String?,
       offerTitle: offer?['title'] as String?,
       promoterName: promoter?['display_name'] as String?,
+      guestEmail: row['guest_email'] as String?,
+      guestAccessType: GuestAccessType.fromValue(
+        row['guest_access_type'] as String?,
+      ),
+      showQrOnEntry: offer?['show_qr_on_entry'] as bool? ?? true,
+      showSecretCodeOnEntry:
+          offer?['show_secret_code_on_entry'] as bool? ?? false,
+      showListNameOnEntry: offer?['show_list_name_on_entry'] as bool? ?? false,
       notes: row['notes'] as String?,
     );
   }
@@ -972,6 +1057,9 @@ class NightRadarRepository {
       allowAnonymousEntry: row['allow_anonymous_entry'] as bool? ?? false,
       tableGuestCapacity: row['table_guest_capacity'] as int?,
       showPublicAvailability: row['show_public_availability'] as bool? ?? false,
+      showQrOnEntry: row['show_qr_on_entry'] as bool? ?? true,
+      showSecretCodeOnEntry: row['show_secret_code_on_entry'] as bool? ?? false,
+      showListNameOnEntry: row['show_list_name_on_entry'] as bool? ?? false,
       requiresListName: row['requires_list_name'] as bool? ?? false,
       promoterName: promoter?['display_name'] as String?,
       promoterRating: (promoter?['rating'] as num?)?.toDouble() ?? 0,
@@ -1373,6 +1461,17 @@ class NightRadarRepository {
       return null;
     }
     return DateTime.tryParse(value)?.toLocal();
+  }
+
+  Future<AppProfile?> _waitForCurrentProfile() async {
+    for (var attempt = 0; attempt < 5; attempt++) {
+      final profile = await getCurrentProfile();
+      if (profile != null) {
+        return profile;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+    return null;
   }
 
   void _ensureMutationsAllowed(String message) {

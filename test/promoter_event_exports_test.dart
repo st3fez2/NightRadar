@@ -113,6 +113,9 @@ void main() {
 
     expect(text, contains('NightRadar operational delivery to venue'));
     expect(text, contains('Delivered guest entries: 1'));
-    expect(text, contains('Luca Rossi - 2 pax - APPROVED - VIP Entry'));
+    expect(
+      text,
+      contains('Luca Rossi - 2 pax - APPROVED - Verified user - VIP Entry'),
+    );
   });
 }

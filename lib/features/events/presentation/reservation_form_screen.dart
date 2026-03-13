@@ -8,6 +8,7 @@ import '../../../core/app_providers.dart';
 import '../../../core/widgets/common_widgets.dart';
 import '../../../core/widgets/flavor_notice_card.dart';
 import '../../../core/widgets/language_toggle.dart';
+import '../../../shared/legal_constants.dart';
 import '../../../shared/models.dart';
 
 class ReservationFormScreen extends ConsumerStatefulWidget {
@@ -24,16 +25,23 @@ class ReservationFormScreen extends ConsumerStatefulWidget {
 class _ReservationFormScreenState extends ConsumerState<ReservationFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _guestNameController = TextEditingController();
+  final _guestLastNameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _listNameController = TextEditingController();
   final _notesController = TextEditingController();
 
   int _partySize = 2;
   bool _isSubmitting = false;
+  bool _anonymousEntry = false;
 
   @override
   void dispose() {
     _guestNameController.dispose();
+    _guestLastNameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
+    _listNameController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -43,10 +51,15 @@ class _ReservationFormScreenState extends ConsumerState<ReservationFormScreen> {
     final copy = context.copy;
     final eventAsync = ref.watch(eventDetailsProvider(widget.eventId));
     final profile = ref.watch(currentProfileProvider).valueOrNull;
+    final authUser = ref.watch(supabaseClientProvider).auth.currentUser;
+    final isVerifiedSession = authUser != null && !authUser.isAnonymous;
+    final isAnonymousSession = authUser?.isAnonymous == true;
 
-    if (_guestNameController.text.isEmpty && profile != null) {
+    if (_guestNameController.text.isEmpty &&
+        profile != null &&
+        isVerifiedSession) {
       _guestNameController.text = profile.fullName;
-      _phoneController.text = profile.email ?? '';
+      _emailController.text = profile.email ?? '';
     }
 
     return Scaffold(
@@ -65,6 +78,14 @@ class _ReservationFormScreenState extends ConsumerState<ReservationFormScreen> {
         data: (event) {
           final selectedOffer = _resolveOffer(event);
           final maxPartySize = _maxPartySize(selectedOffer);
+          final requiresPhone =
+              selectedOffer?.phoneRequirement != PhoneRequirement.none;
+          final needsReceiptEmail = !isVerifiedSession;
+          final canChooseAnonymousEntry =
+              selectedOffer?.allowAnonymousEntry ?? false;
+          final needsListName = selectedOffer?.requiresListName ?? false;
+          final anonymousEntryActive =
+              canChooseAnonymousEntry && _anonymousEntry;
           final offerUnavailable =
               selectedOffer != null &&
               selectedOffer.spotsLeft != null &&
@@ -140,12 +161,119 @@ class _ReservationFormScreenState extends ConsumerState<ReservationFormScreen> {
                             ],
                             const SizedBox(height: 12),
                           ],
+                          if (!isVerifiedSession) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF7F1EA),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: const Color(0xFFE0D2C4),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isAnonymousSession
+                                        ? copy.text(
+                                            it: 'Stai prenotando come guest anonimo',
+                                            en: 'You are reserving as an anonymous guest',
+                                          )
+                                        : copy.text(
+                                            it: 'Vuoi apparire come utente verificato?',
+                                            en: 'Want to appear as a verified user?',
+                                          ),
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    isAnonymousSession
+                                        ? copy.text(
+                                            it: 'Il PR vedra un guest anonimo con email ricevuta, non un account verificato.',
+                                            en: 'The promoter will see an anonymous guest with a receipt email, not a verified account.',
+                                          )
+                                        : copy.text(
+                                            it: 'Puoi accedere prima e risultare piu affidabile per il PR, oppure continuare subito come guest con email ricevuta.',
+                                            en: 'You can sign in first and look more reliable to the promoter, or continue now as a guest with an email receipt.',
+                                          ),
+                                  ),
+                                  if (!isAnonymousSession) ...[
+                                    const SizedBox(height: 12),
+                                    OutlinedButton.icon(
+                                      onPressed: () => context.push(
+                                        '/auth?from=${Uri.encodeComponent(_authFromPath())}',
+                                      ),
+                                      icon: const Icon(
+                                        Icons.verified_user_outlined,
+                                      ),
+                                      label: Text(
+                                        copy.text(
+                                          it: 'Accedi come utente verificato',
+                                          en: 'Sign in as verified user',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ] else ...[
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Chip(
+                                avatar: const Icon(
+                                  Icons.verified_rounded,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  copy.text(
+                                    it: 'Prenotazione come utente verificato',
+                                    en: 'Booking as verified user',
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          if (canChooseAnonymousEntry) ...[
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              value: anonymousEntryActive,
+                              onChanged: (value) {
+                                setState(() {
+                                  _anonymousEntry = value;
+                                });
+                              },
+                              title: Text(
+                                copy.text(
+                                  it: 'Mostra una voce anonima al PR',
+                                  en: 'Show an anonymous entry to the promoter',
+                                ),
+                              ),
+                              subtitle: Text(
+                                copy.text(
+                                  it: 'Utile se vuoi comparire solo con il nome lista o tavolo.',
+                                  en: 'Useful if you want to appear only with the list or table name.',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
                           TextFormField(
                             controller: _guestNameController,
                             decoration: InputDecoration(
                               labelText: copy.text(
-                                it: 'Nome referente',
-                                en: 'Lead guest name',
+                                it: anonymousEntryActive
+                                    ? 'Nome referente interno'
+                                    : 'Nome referente',
+                                en: anonymousEntryActive
+                                    ? 'Internal lead name'
+                                    : 'Lead guest name',
                               ),
                             ),
                             validator: (value) {
@@ -158,26 +286,100 @@ class _ReservationFormScreenState extends ConsumerState<ReservationFormScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _phoneController,
-                            decoration: InputDecoration(
-                              labelText: copy.text(
-                                it: 'Telefono o email',
-                                en: 'Phone or email',
+                          if (selectedOffer?.collectLastName == true &&
+                              !anonymousEntryActive) ...[
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _guestLastNameController,
+                              decoration: InputDecoration(
+                                labelText: copy.text(
+                                  it: 'Cognome referente',
+                                  en: 'Lead guest last name',
+                                ),
                               ),
+                              validator: (value) {
+                                if (value == null || value.trim().length < 2) {
+                                  return copy.text(
+                                    it: 'Inserisci anche il cognome',
+                                    en: 'Enter the last name too',
+                                  );
+                                }
+                                return null;
+                              },
                             ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return copy.text(
-                                  it: 'Inserisci un contatto',
-                                  en: 'Enter a contact',
-                                );
-                              }
-                              return null;
-                            },
-                          ),
+                          ],
                           const SizedBox(height: 12),
+                          if (requiresPhone) ...[
+                            TextFormField(
+                              controller: _phoneController,
+                              decoration: InputDecoration(
+                                labelText: copy.text(
+                                  it: 'Telefono referente',
+                                  en: 'Lead guest phone',
+                                ),
+                              ),
+                              keyboardType: TextInputType.phone,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return copy.text(
+                                    it: 'Inserisci il telefono del referente',
+                                    en: 'Enter the lead guest phone',
+                                  );
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          if (needsReceiptEmail) ...[
+                            TextFormField(
+                              controller: _emailController,
+                              decoration: InputDecoration(
+                                labelText: copy.text(
+                                  it: 'Email per ricevuta',
+                                  en: 'Receipt email',
+                                ),
+                              ),
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (value) {
+                                final trimmed = value?.trim() ?? '';
+                                if (trimmed.isEmpty ||
+                                    !_isLikelyEmail(trimmed)) {
+                                  return copy.text(
+                                    it: 'Inserisci una email valida per la ricevuta',
+                                    en: 'Enter a valid receipt email',
+                                  );
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          if (needsListName ||
+                              selectedOffer?.showListNameOnEntry == true) ...[
+                            TextFormField(
+                              controller: _listNameController,
+                              decoration: InputDecoration(
+                                labelText: copy.text(
+                                  it: 'Nome lista o tavolo',
+                                  en: 'List or table name',
+                                ),
+                              ),
+                              validator: (value) {
+                                if (!needsListName) {
+                                  return null;
+                                }
+                                if (value == null || value.trim().length < 2) {
+                                  return copy.text(
+                                    it: 'Inserisci il nome lista o tavolo',
+                                    en: 'Enter the list or table name',
+                                  );
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           DropdownButtonFormField<int>(
                             key: ValueKey(
                               '${selectedOffer?.id ?? 'generic'}-$maxPartySize',
@@ -235,7 +437,13 @@ class _ReservationFormScreenState extends ConsumerState<ReservationFormScreen> {
                                     _isSubmitting ||
                                     offerUnavailable
                                 ? null
-                                : () => _submit(context, event, selectedOffer),
+                                : () => _submit(
+                                    context,
+                                    event,
+                                    selectedOffer,
+                                    isVerifiedSession: isVerifiedSession,
+                                    isAnonymousSession: isAnonymousSession,
+                                  ),
                             child: Text(
                               !AppFlavorConfig.allowMutations
                                   ? copy.text(
@@ -248,8 +456,12 @@ class _ReservationFormScreenState extends ConsumerState<ReservationFormScreen> {
                                             en: 'Submitting...',
                                           )
                                         : copy.text(
-                                            it: 'Genera prenotazione e QR',
-                                            en: 'Generate reservation and QR',
+                                            it: isVerifiedSession
+                                                ? 'Genera prenotazione'
+                                                : 'Continua come guest e prenota',
+                                            en: isVerifiedSession
+                                                ? 'Create reservation'
+                                                : 'Continue as guest and reserve',
                                           )),
                             ),
                           ),
@@ -303,11 +515,25 @@ class _ReservationFormScreenState extends ConsumerState<ReservationFormScreen> {
     return 10;
   }
 
+  String _authFromPath() {
+    final base = '/event/${widget.eventId}/reserve';
+    if (widget.offerId == null || widget.offerId!.isEmpty) {
+      return base;
+    }
+    return '$base?offerId=${Uri.encodeQueryComponent(widget.offerId!)}';
+  }
+
+  bool _isLikelyEmail(String value) {
+    return value.contains('@') && value.contains('.');
+  }
+
   Future<void> _submit(
     BuildContext context,
     EventDetails event,
-    EventOffer? offer,
-  ) async {
+    EventOffer? offer, {
+    required bool isVerifiedSession,
+    required bool isAnonymousSession,
+  }) async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -317,14 +543,45 @@ class _ReservationFormScreenState extends ConsumerState<ReservationFormScreen> {
     });
 
     try {
+      final repository = ref.read(nightRadarRepositoryProvider);
+      if (!isVerifiedSession && !isAnonymousSession) {
+        await repository.signInAnonymously();
+        ref.invalidate(currentProfileProvider);
+      }
+
+      var profile = await repository.getCurrentProfile();
+      for (var attempt = 0; attempt < 4 && profile == null; attempt++) {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+        profile = await repository.getCurrentProfile();
+      }
+
+      if (profile != null &&
+          !profile.hasAcceptedLegalVersion(nightRadarLegalVersion)) {
+        await repository.acceptLegalPolicies(
+          acceptedAt: DateTime.now(),
+          version: nightRadarLegalVersion,
+        );
+        ref.invalidate(currentProfileProvider);
+      }
+
       final reservation = await ref
           .read(nightRadarRepositoryProvider)
           .createReservation(
             event: event,
             offer: offer,
             guestName: _guestNameController.text.trim(),
+            guestLastName: _guestLastNameController.text.trim().isEmpty
+                ? null
+                : _guestLastNameController.text.trim(),
             phone: _phoneController.text.trim(),
+            receiptEmail: _emailController.text.trim().isEmpty
+                ? null
+                : _emailController.text.trim(),
             partySize: _partySize,
+            listName: _listNameController.text.trim().isEmpty
+                ? null
+                : _listNameController.text.trim(),
+            isAnonymousEntry: _anonymousEntry,
             notes: _notesController.text.trim().isEmpty
                 ? null
                 : _notesController.text.trim(),

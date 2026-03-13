@@ -15,9 +15,8 @@ String buildGuestListExport({
   );
   final sortedReservations = [...reservations]
     ..sort(
-      (left, right) => left.guestName.toLowerCase().compareTo(
-            right.guestName.toLowerCase(),
-          ),
+      (left, right) =>
+          left.guestName.toLowerCase().compareTo(right.guestName.toLowerCase()),
     );
   final totalGuests = sortedReservations.fold<int>(
     0,
@@ -41,7 +40,9 @@ String buildGuestListExport({
         en: 'Guest entries: ${sortedReservations.length}',
       ),
     )
-    ..writeln(copy.text(it: 'Persone: $totalGuests', en: 'People: $totalGuests'))
+    ..writeln(
+      copy.text(it: 'Persone: $totalGuests', en: 'People: $totalGuests'),
+    )
     ..writeln();
 
   if (sortedReservations.isEmpty) {
@@ -58,13 +59,16 @@ String buildGuestListExport({
         '${index + 1}. ${reservation.displayGuestName}',
         '${reservation.partySize} pax',
         reservation.status.toUpperCase(),
+        copy.guestAccessLabel(reservation.guestAccessType),
       ];
 
-      if (reservation.offerTitle != null && reservation.offerTitle!.trim().isNotEmpty) {
+      if (reservation.offerTitle != null &&
+          reservation.offerTitle!.trim().isNotEmpty) {
         parts.add(reservation.offerTitle!.trim());
       }
 
-      if (reservation.listName != null && reservation.listName!.trim().isNotEmpty) {
+      if (reservation.listName != null &&
+          reservation.listName!.trim().isNotEmpty) {
         parts.add(
           copy.text(
             it: 'Lista ${reservation.listName!.trim()}',
@@ -79,9 +83,11 @@ String buildGuestListExport({
         for (final participant in reservation.participantDetails) {
           final detail = [
             participant.firstName,
-            if (participant.lastName != null && participant.lastName!.trim().isNotEmpty)
+            if (participant.lastName != null &&
+                participant.lastName!.trim().isNotEmpty)
               participant.lastName!.trim(),
-            if (participant.phone != null && participant.phone!.trim().isNotEmpty)
+            if (participant.phone != null &&
+                participant.phone!.trim().isNotEmpty)
               participant.phone!.trim(),
           ].join(' - ');
           buffer.writeln('   - $detail');
@@ -96,12 +102,23 @@ String buildGuestListExport({
           ),
         );
       }
+
+      if (reservation.guestEmail?.trim().isNotEmpty == true) {
+        buffer.writeln(
+          copy.text(
+            it: '   Ricevuta: ${reservation.guestEmail!.trim()}',
+            en: '   Receipt: ${reservation.guestEmail!.trim()}',
+          ),
+        );
+      }
     }
   }
 
   buffer
     ..writeln()
-    ..write(copy.text(it: 'Generata con NightRadar', en: 'Generated with NightRadar'));
+    ..write(
+      copy.text(it: 'Generata con NightRadar', en: 'Generated with NightRadar'),
+    );
 
   return buffer.toString().trim();
 }

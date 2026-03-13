@@ -12,10 +12,7 @@ class AppCopy {
 
   String get dateLocale => isEnglish ? 'en_US' : 'it_IT';
 
-  String text({
-    required String it,
-    required String en,
-  }) {
+  String text({required String it, required String en}) {
     return isEnglish ? en : it;
   }
 
@@ -50,17 +47,11 @@ class AppCopy {
   }
 
   String unavailableOffersPrice() {
-    return text(
-      it: 'Offerte in aggiornamento',
-      en: 'Offers updating',
-    );
+    return text(it: 'Offerte in aggiornamento', en: 'Offers updating');
   }
 
   String pendingOffersPrice() {
-    return text(
-      it: 'Offerte da aggiornare',
-      en: 'Offers pending update',
-    );
+    return text(it: 'Offerte da aggiornare', en: 'Offers pending update');
   }
 
   String freeEntryLabel() {
@@ -160,7 +151,10 @@ class AppCopy {
     return switch (preference) {
       ContactPreference.whatsapp => 'WhatsApp',
       ContactPreference.email => text(it: 'Email', en: 'Email'),
-      ContactPreference.inbox => text(it: 'Inbox NightRadar', en: 'NightRadar inbox'),
+      ContactPreference.inbox => text(
+        it: 'Inbox NightRadar',
+        en: 'NightRadar inbox',
+      ),
     };
   }
 
@@ -176,6 +170,19 @@ class AppCopy {
     return switch (type) {
       PromoterReactionType.heart => text(it: 'Cuori', en: 'Hearts'),
       PromoterReactionType.thumbsUp => text(it: 'Pollici su', en: 'Thumbs up'),
+    };
+  }
+
+  String guestAccessLabel(GuestAccessType type) {
+    return switch (type) {
+      GuestAccessType.verifiedUser => text(
+        it: 'Utente verificato',
+        en: 'Verified user',
+      ),
+      GuestAccessType.anonymousGuest => text(
+        it: 'Guest anonimo',
+        en: 'Anonymous guest',
+      ),
     };
   }
 }
