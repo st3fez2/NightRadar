@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_providers.dart';
+import '../../core/widgets/brand_lockup.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/public_link_card.dart';
 import '../../shared/models.dart';
@@ -236,6 +237,13 @@ class _PublicHero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const NightRadarLockup(
+            label: 'NightRadar',
+            caption: 'AI nightlife signal',
+            textColor: Colors.white,
+            iconSize: 58,
+          ),
+          const SizedBox(height: 16),
           Wrap(
             spacing: 10,
             runSpacing: 10,

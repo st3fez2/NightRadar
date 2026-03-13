@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_providers.dart';
+import '../../core/widgets/brand_lockup.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/public_link_card.dart';
 import '../../shared/models.dart';
@@ -20,7 +21,11 @@ class PromoterDashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('NightRadar PR'),
+        title: const NightRadarLockup(
+          label: 'NightRadar PR',
+          caption: 'Guest list control',
+          iconSize: 34,
+        ),
         actions: [
           IconButton(
             onPressed: () async {

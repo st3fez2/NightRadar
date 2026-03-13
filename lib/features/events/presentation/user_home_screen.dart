@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/app_providers.dart';
+import '../../../core/widgets/brand_lockup.dart';
 import '../../../core/widgets/common_widgets.dart';
 import '../../../core/widgets/public_link_card.dart';
 import '../../../shared/models.dart';
@@ -26,7 +27,11 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('NightRadar'),
+        title: const NightRadarLockup(
+          label: 'NightRadar',
+          caption: 'User mode',
+          iconSize: 34,
+        ),
         actions: [
           IconButton(
             onPressed: () async {
