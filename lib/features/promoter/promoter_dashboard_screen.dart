@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_providers.dart';
 import '../../core/widgets/common_widgets.dart';
+import '../../core/widgets/public_link_card.dart';
 import '../../shared/models.dart';
 import 'guest_list_exporter.dart';
 
@@ -45,150 +46,166 @@ class PromoterDashboardScreen extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                 children: [
-                NightRadarHero(
-                  title: 'Ciao ${dashboard.profile.fullName.split(' ').first}',
-                  subtitle:
-                      'Crea serate, chiudi le liste e gira al locale un messaggio gia pronto per WhatsApp o copia-incolla.',
-                  trailing: const RadarChip(label: 'hot'),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    for (final stat in dashboard.stats)
+                  NightRadarHero(
+                    title:
+                        'Ciao ${dashboard.profile.fullName.split(' ').first}',
+                    subtitle:
+                        'Crea serate, chiudi le liste e gira al locale un messaggio gia pronto per WhatsApp o copia-incolla.',
+                    trailing: const RadarChip(label: 'hot'),
+                  ),
+                  const SizedBox(height: 16),
+                  const PublicLinkCard(
+                    title: 'Landing pubblica sempre pronta da girare',
+                    subtitle:
+                        'Il QR della main page resta disponibile anche nell area PR, cosi puoi condividere il progetto in un tocco mentre lavori sulle liste.',
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      for (final stat in dashboard.stats)
+                        SizedBox(
+                          width: 140,
+                          child: MetricCard(
+                            label: stat.label,
+                            value: stat.value,
+                          ),
+                        ),
                       SizedBox(
                         width: 140,
                         child: MetricCard(
-                          label: stat.label,
-                          value: stat.value,
+                          label: 'Locali partner',
+                          value: '${dashboard.venues.length}',
                         ),
                       ),
-                    SizedBox(
-                      width: 140,
-                      child: MetricCard(
-                        label: 'Locali partner',
-                        value: '${dashboard.venues.length}',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                ResponsiveActionRow(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: dashboard.venues.isEmpty
-                          ? null
-                          : () => _openCreateEventDialog(context, ref, dashboard),
-                      icon: const Icon(Icons.add_circle_outline_rounded),
-                      label: const Text('Nuovo evento'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: dashboard.events.isEmpty
-                          ? null
-                          : () => _openAddReservationDialog(
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ResponsiveActionRow(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: dashboard.venues.isEmpty
+                            ? null
+                            : () => _openCreateEventDialog(
                                 context,
                                 ref,
                                 dashboard,
                               ),
-                      icon: const Icon(Icons.person_add_alt_1_rounded),
-                      label: const Text('Nuovo nominativo'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Locali collegati',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                if (dashboard.venues.isEmpty)
-                  const EmptyStateCard(
-                    title: 'Nessun locale associato',
-                    message:
-                        'Collega il tuo profilo PR a un locale per poter creare serate e liste.',
-                  )
-                else
-                  ...dashboard.venues.map(
-                    (venue) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Card(
-                        child: ListTile(
-                          leading: const Icon(Icons.location_on_outlined),
-                          title: Text(venue.name),
-                          subtitle: Text('${venue.city}  ${venue.addressLine ?? ''}'),
-                        ),
+                        icon: const Icon(Icons.add_circle_outline_rounded),
+                        label: const Text('Nuovo evento'),
                       ),
-                    ),
-                  ),
-                const SizedBox(height: 20),
-                Text(
-                  'Serate e liste',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                if (dashboard.events.isEmpty)
-                  const EmptyStateCard(
-                    title: 'Nessuna serata ancora',
-                    message:
-                        'Crea il tuo primo evento e inizia a raccogliere nominativi da condividere con locale o altri PR.',
-                  )
-                else
-                  ...dashboard.events.map(
-                    (event) => Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: _PromoterEventCard(
-                        event: event,
-                        reservations: reservationsByEvent[event.id] ?? const [],
-                        onOpenEvent: () => context.push('/event/${event.id}'),
-                        onAddReservation: () => _openAddReservationDialog(
-                          context,
-                          ref,
-                          dashboard,
-                          initialEventId: event.id,
-                        ),
-                        onCopyList: () => _copyGuestList(
-                          context,
-                          dashboard,
-                          event,
-                          reservationsByEvent[event.id] ?? const [],
-                        ),
-                        onShareWhatsApp: () => _shareGuestListOnWhatsApp(
-                          context,
-                          dashboard,
-                          event,
-                          reservationsByEvent[event.id] ?? const [],
-                        ),
+                      OutlinedButton.icon(
+                        onPressed: dashboard.events.isEmpty
+                            ? null
+                            : () => _openAddReservationDialog(
+                                context,
+                                ref,
+                                dashboard,
+                              ),
+                        icon: const Icon(Icons.person_add_alt_1_rounded),
+                        label: const Text('Nuovo nominativo'),
                       ),
-                    ),
+                    ],
                   ),
-                const SizedBox(height: 20),
-                Text(
-                  'Nominativi recenti',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                if (dashboard.reservations.isEmpty)
-                  const EmptyStateCard(
-                    title: 'Nessun nominativo ancora',
-                    message:
-                        'Quando aggiungi una guest list o arrivano prenotazioni utente, la vedi qui.',
-                  )
-                else
-                  ...dashboard.reservations.take(12).map(
-                    (reservation) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Card(
-                        child: ListTile(
-                          title: Text(reservation.guestName),
-                          subtitle: Text(
-                            '${reservation.eventTitle}  ·  ${reservation.partySize} pax',
+                  const SizedBox(height: 20),
+                  Text(
+                    'Locali collegati',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 12),
+                  if (dashboard.venues.isEmpty)
+                    const EmptyStateCard(
+                      title: 'Nessun locale associato',
+                      message:
+                          'Collega il tuo profilo PR a un locale per poter creare serate e liste.',
+                    )
+                  else
+                    ...dashboard.venues.map(
+                      (venue) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.location_on_outlined),
+                            title: Text(venue.name),
+                            subtitle: Text(
+                              '${venue.city}  ${venue.addressLine ?? ''}',
+                            ),
                           ),
-                          trailing: RadarChip(label: reservation.status),
                         ),
                       ),
                     ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Serate e liste',
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
+                  const SizedBox(height: 12),
+                  if (dashboard.events.isEmpty)
+                    const EmptyStateCard(
+                      title: 'Nessuna serata ancora',
+                      message:
+                          'Crea il tuo primo evento e inizia a raccogliere nominativi da condividere con locale o altri PR.',
+                    )
+                  else
+                    ...dashboard.events.map(
+                      (event) => Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: _PromoterEventCard(
+                          event: event,
+                          reservations:
+                              reservationsByEvent[event.id] ?? const [],
+                          onOpenEvent: () => context.push('/event/${event.id}'),
+                          onAddReservation: () => _openAddReservationDialog(
+                            context,
+                            ref,
+                            dashboard,
+                            initialEventId: event.id,
+                          ),
+                          onCopyList: () => _copyGuestList(
+                            context,
+                            dashboard,
+                            event,
+                            reservationsByEvent[event.id] ?? const [],
+                          ),
+                          onShareWhatsApp: () => _shareGuestListOnWhatsApp(
+                            context,
+                            dashboard,
+                            event,
+                            reservationsByEvent[event.id] ?? const [],
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Nominativi recenti',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 12),
+                  if (dashboard.reservations.isEmpty)
+                    const EmptyStateCard(
+                      title: 'Nessun nominativo ancora',
+                      message:
+                          'Quando aggiungi una guest list o arrivano prenotazioni utente, la vedi qui.',
+                    )
+                  else
+                    ...dashboard.reservations
+                        .take(12)
+                        .map(
+                          (reservation) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Card(
+                              child: ListTile(
+                                title: Text(reservation.guestName),
+                                subtitle: Text(
+                                  '${reservation.eventTitle}  ·  ${reservation.partySize} pax',
+                                ),
+                                trailing: RadarChip(label: reservation.status),
+                              ),
+                            ),
+                          ),
+                        ),
                 ],
               ),
             ),
@@ -235,9 +252,7 @@ class PromoterDashboardScreen extends ConsumerWidget {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Lista ${event.title} copiata negli appunti'),
-      ),
+      SnackBar(content: Text('Lista ${event.title} copiata negli appunti')),
     );
   }
 
@@ -262,10 +277,7 @@ class PromoterDashboardScreen extends ConsumerWidget {
     );
     final openedWeb = openedApp
         ? true
-        : await launchUrl(
-            webUri,
-            mode: LaunchMode.externalApplication,
-          );
+        : await launchUrl(webUri, mode: LaunchMode.externalApplication);
 
     if (openedWeb || !context.mounted) {
       return;
@@ -289,6 +301,9 @@ class PromoterDashboardScreen extends ConsumerWidget {
     final descriptionController = TextEditingController();
     DateTime startsAt = DateTime.now().add(const Duration(days: 7, hours: 3));
     var selectedVenueId = data.venues.first.id;
+    var isSaving = false;
+    String? errorText;
+    final messenger = ScaffoldMessenger.of(context);
 
     await showDialog<void>(
       context: context,
@@ -323,7 +338,9 @@ class PromoterDashboardScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: titleController,
-                        decoration: const InputDecoration(labelText: 'Titolo evento'),
+                        decoration: const InputDecoration(
+                          labelText: 'Titolo evento',
+                        ),
                         validator: (value) {
                           if (value == null || value.trim().length < 3) {
                             return 'Inserisci un titolo';
@@ -349,7 +366,10 @@ class PromoterDashboardScreen extends ConsumerWidget {
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Inizio evento'),
                         subtitle: Text(
-                          DateFormat('EEE d MMM yyyy, HH:mm', 'it_IT').format(startsAt),
+                          DateFormat(
+                            'EEE d MMM yyyy, HH:mm',
+                            'it_IT',
+                          ).format(startsAt),
                         ),
                         trailing: IconButton(
                           icon: const Icon(Icons.calendar_month_rounded),
@@ -384,41 +404,83 @@ class PromoterDashboardScreen extends ConsumerWidget {
                           },
                         ),
                       ),
+                      if (errorText != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          errorText!,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.error,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.of(context).pop(),
                   child: const Text('Annulla'),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) {
-                      return;
-                    }
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) {
+                            return;
+                          }
 
-                    await ref.read(nightRadarRepositoryProvider).createPromoterEvent(
-                          venueId: selectedVenueId,
-                          title: titleController.text.trim(),
-                          startsAt: startsAt,
-                          genre: genreController.text.trim().isEmpty
-                              ? 'commerciale'
-                              : genreController.text.trim(),
-                          description: descriptionController.text.trim().isEmpty
-                              ? null
-                              : descriptionController.text.trim(),
-                        );
+                          setState(() {
+                            isSaving = true;
+                            errorText = null;
+                          });
 
-                    ref.invalidate(promoterDashboardProvider);
-                    ref.invalidate(eventFeedProvider);
+                          try {
+                            await ref
+                                .read(nightRadarRepositoryProvider)
+                                .createPromoterEvent(
+                                  venueId: selectedVenueId,
+                                  title: titleController.text.trim(),
+                                  startsAt: startsAt,
+                                  genre: genreController.text.trim().isEmpty
+                                      ? 'commerciale'
+                                      : genreController.text.trim(),
+                                  description:
+                                      descriptionController.text.trim().isEmpty
+                                      ? null
+                                      : descriptionController.text.trim(),
+                                );
 
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: const Text('Pubblica'),
+                            ref.invalidate(promoterDashboardProvider);
+                            ref.invalidate(eventFeedProvider);
+
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                            }
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Evento creato e pubblicato'),
+                              ),
+                            );
+                          } catch (error) {
+                            if (context.mounted) {
+                              setState(() {
+                                errorText = error.toString();
+                              });
+                            }
+                          } finally {
+                            if (context.mounted) {
+                              setState(() {
+                                isSaving = false;
+                              });
+                            }
+                          }
+                        },
+                  child: Text(isSaving ? 'Pubblico...' : 'Pubblica'),
                 ),
               ],
             );
@@ -437,8 +499,12 @@ class PromoterDashboardScreen extends ConsumerWidget {
     final formKey = GlobalKey<FormState>();
     final guestController = TextEditingController();
     final phoneController = TextEditingController();
-    var selectedEventId = initialEventId ?? (data.events.isNotEmpty ? data.events.first.id : '');
+    var selectedEventId =
+        initialEventId ?? (data.events.isNotEmpty ? data.events.first.id : '');
     var partySize = 2;
+    var isSaving = false;
+    String? errorText;
+    final messenger = ScaffoldMessenger.of(context);
 
     await showDialog<void>(
       context: context,
@@ -454,8 +520,9 @@ class PromoterDashboardScreen extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       DropdownButtonFormField<String>(
-                        initialValue:
-                            selectedEventId.isEmpty ? null : selectedEventId,
+                        initialValue: selectedEventId.isEmpty
+                            ? null
+                            : selectedEventId,
                         decoration: const InputDecoration(labelText: 'Evento'),
                         items: data.events
                             .map(
@@ -500,9 +567,7 @@ class PromoterDashboardScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                       DropdownButtonFormField<int>(
                         initialValue: partySize,
-                        decoration: const InputDecoration(
-                          labelText: 'Persone',
-                        ),
+                        decoration: const InputDecoration(labelText: 'Persone'),
                         items: List.generate(
                           10,
                           (index) => DropdownMenuItem(
@@ -516,32 +581,72 @@ class PromoterDashboardScreen extends ConsumerWidget {
                           });
                         },
                       ),
+                      if (errorText != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          errorText!,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.error,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.of(context).pop(),
                   child: const Text('Annulla'),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) {
-                      return;
-                    }
-                    await ref.read(nightRadarRepositoryProvider).createManualReservation(
-                          eventId: selectedEventId,
-                          guestName: guestController.text.trim(),
-                          phone: phoneController.text.trim(),
-                          partySize: partySize,
-                        );
-                    ref.invalidate(promoterDashboardProvider);
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: const Text('Salva'),
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) {
+                            return;
+                          }
+                          setState(() {
+                            isSaving = true;
+                            errorText = null;
+                          });
+                          try {
+                            await ref
+                                .read(nightRadarRepositoryProvider)
+                                .createManualReservation(
+                                  eventId: selectedEventId,
+                                  guestName: guestController.text.trim(),
+                                  phone: phoneController.text.trim(),
+                                  partySize: partySize,
+                                );
+                            ref.invalidate(promoterDashboardProvider);
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                            }
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Nominativo aggiunto alla lista'),
+                              ),
+                            );
+                          } catch (error) {
+                            if (context.mounted) {
+                              setState(() {
+                                errorText = error.toString();
+                              });
+                            }
+                          } finally {
+                            if (context.mounted) {
+                              setState(() {
+                                isSaving = false;
+                              });
+                            }
+                          }
+                        },
+                  child: Text(isSaving ? 'Salvo...' : 'Salva'),
                 ),
               ],
             );
@@ -655,22 +760,24 @@ class _PromoterEventCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
-              ...reservations.take(4).map(
-                (reservation) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          reservation.guestName,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
+              ...reservations
+                  .take(4)
+                  .map(
+                    (reservation) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              reservation.guestName,
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                          ),
+                          Text('${reservation.partySize} pax'),
+                        ],
                       ),
-                      Text('${reservation.partySize} pax'),
-                    ],
+                    ),
                   ),
-                ),
-              ),
               if (reservations.length > 4)
                 Text('+${reservations.length - 4} altri nominativi'),
             ],

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/app_providers.dart';
+import '../../core/widgets/public_link_card.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -88,6 +89,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 20),
+                const PublicLinkCard(
+                  title: 'QR pubblico sempre disponibile',
+                  subtitle:
+                      'Dalla landing puoi condividere il progetto, aprire il sito live o scaricare il QR senza autenticarti.',
                 ),
                 const SizedBox(height: 20),
                 Card(
@@ -245,11 +252,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       }
 
       if (mounted) {
-        context.go('/');
+        final from = GoRouterState.of(context).uri.queryParameters['from'];
+        context.go(
+          from != null && from.isNotEmpty && from != '/auth' ? from : '/app',
+        );
       }
     } catch (error) {
       setState(() {
-        _errorText = error.toString().replaceFirst('AuthException(message: ', '').replaceAll(')', '');
+        _errorText = error
+            .toString()
+            .replaceFirst('AuthException(message: ', '')
+            .replaceAll(')', '');
       });
     } finally {
       if (mounted) {

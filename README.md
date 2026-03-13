@@ -26,15 +26,16 @@ NightRadar e un prodotto Flutter + Supabase focalizzato su:
 Il repository contiene un vertical slice funzionante:
 
 1. login / signup
-2. home utente con eventi e radar
-3. dettaglio evento con offerte
-4. prenotazione con QR
-5. wallet pass
-6. dashboard PR con locali partner
-7. creazione evento dal lato PR
-8. inserimento nominativi manuale
-9. export lista via copia-incolla
-10. condivisione lista su WhatsApp
+2. landing pubblica con QR sempre visibile, download, share e link live
+3. home utente con eventi e radar
+4. dettaglio evento con offerte
+5. prenotazione con QR
+6. wallet pass
+7. dashboard PR con locali partner
+8. creazione evento dal lato PR
+9. inserimento nominativi manuale
+10. export lista via copia-incolla
+11. condivisione lista su WhatsApp
 
 ## Demo accounts
 
@@ -63,6 +64,7 @@ Le migration principali sono in:
 - `supabase/migrations/20260313011359_nightradar_mvp_schema.sql`
 - `supabase/migrations/20260313011837_nightradar_demo_seed.sql`
 - `supabase/migrations/20260313103000_promoter_event_creation.sql`
+- `supabase/migrations/20260313143000_public_feed_anon_access.sql`
 
 Per applicare future migration:
 

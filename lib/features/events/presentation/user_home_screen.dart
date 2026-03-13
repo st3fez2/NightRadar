@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/app_providers.dart';
 import '../../../core/widgets/common_widgets.dart';
+import '../../../core/widgets/public_link_card.dart';
 import '../../../shared/models.dart';
 
 class UserHomeScreen extends ConsumerStatefulWidget {
@@ -45,124 +46,130 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-            NightRadarHero(
-              title: profileAsync.value == null
-                  ? 'La tua notte parte da qui'
-                  : 'Ciao ${profileAsync.value!.fullName.split(' ').first}',
-              subtitle:
-                  'Mappa le serate della citta, confronta offerte e tieni pronto il QR.',
-              trailing: const RadarChip(label: 'active'),
-            ),
-            const SizedBox(height: 18),
-            eventsAsync.when(
-              data: (events) {
-                final tags = {
-                  for (final event in events) ...event.musicTags,
-                }.toList()
-                  ..sort();
-                final visibleEvents = _filterEvents(events);
+              NightRadarHero(
+                title: profileAsync.value == null
+                    ? 'La tua notte parte da qui'
+                    : 'Ciao ${profileAsync.value!.fullName.split(' ').first}',
+                subtitle:
+                    'Mappa le serate della citta, confronta offerte e tieni pronto il QR.',
+                trailing: const RadarChip(label: 'active'),
+              ),
+              const SizedBox(height: 18),
+              const PublicLinkCard(
+                title: 'Condividi NightRadar con il tuo gruppo',
+                subtitle:
+                    'La home utente tiene sempre visibile QR e link pubblico, cosi puoi girarli al volo ad amici e nuovi invitati.',
+              ),
+              const SizedBox(height: 18),
+              eventsAsync.when(
+                data: (events) {
+                  final tags = {
+                    for (final event in events) ...event.musicTags,
+                  }.toList()..sort();
+                  final visibleEvents = _filterEvents(events);
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      height: 40,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [
-                          _FilterChip(
-                            label: 'Tutto',
-                            selected: _selectedFilter == 'all',
-                            onTap: () => setState(() => _selectedFilter = 'all'),
-                          ),
-                          for (final tag in tags)
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        height: 40,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
                             _FilterChip(
-                              label: tag,
-                              selected: _selectedFilter == tag,
-                              onTap: () => setState(() => _selectedFilter = tag),
+                              label: 'Tutto',
+                              selected: _selectedFilter == 'all',
+                              onTap: () =>
+                                  setState(() => _selectedFilter = 'all'),
                             ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (visibleEvents.isEmpty)
-                      const EmptyStateCard(
-                        title: 'Nessuna serata per questo filtro',
-                        message:
-                            'Cambia genere o torna su "Tutto" per vedere le altre serate.',
-                      )
-                    else
-                      ...visibleEvents.map(
-                        (event) => Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: _EventCard(
-                            event: event,
-                            onTap: () => context.push('/event/${event.id}'),
-                          ),
+                            for (final tag in tags)
+                              _FilterChip(
+                                label: tag,
+                                selected: _selectedFilter == tag,
+                                onTap: () =>
+                                    setState(() => _selectedFilter = tag),
+                              ),
+                          ],
                         ),
                       ),
-                  ],
-                );
-              },
-              error: (error, stackTrace) => EmptyStateCard(
-                title: 'Impossibile caricare le serate',
-                message: error.toString(),
-              ),
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              'I miei pass',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            reservationsAsync.when(
-              data: (reservations) {
-                if (reservations.isEmpty) {
-                  return const EmptyStateCard(
-                    title: 'Ancora nessun pass',
-                    message:
-                        'Quando prenoti una serata, il tuo QR apparira qui.',
+                      const SizedBox(height: 16),
+                      if (visibleEvents.isEmpty)
+                        const EmptyStateCard(
+                          title: 'Nessuna serata per questo filtro',
+                          message:
+                              'Cambia genere o torna su "Tutto" per vedere le altre serate.',
+                        )
+                      else
+                        ...visibleEvents.map(
+                          (event) => Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: _EventCard(
+                              event: event,
+                              onTap: () => context.push('/event/${event.id}'),
+                            ),
+                          ),
+                        ),
+                    ],
                   );
-                }
-
-                return Column(
-                  children: reservations
-                      .take(4)
-                      .map(
-                        (reservation) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Card(
-                            child: ListTile(
-                              onTap: () => context.push(
-                                '/wallet/${reservation.id}',
-                              ),
-                              title: Text(reservation.eventTitle),
-                              subtitle: Text(
-                                '${reservation.venueName}  ${DateFormat('EEE d MMM, HH:mm', 'it_IT').format(reservation.startsAt)}',
-                              ),
-                              trailing: RadarChip(label: reservation.status),
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                );
-              },
-              error: (error, stackTrace) => EmptyStateCard(
-                title: 'Wallet non disponibile',
-                message: error.toString(),
-              ),
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: CircularProgressIndicator(),
+                },
+                error: (error, stackTrace) => EmptyStateCard(
+                  title: 'Impossibile caricare le serate',
+                  message: error.toString(),
+                ),
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(child: CircularProgressIndicator()),
                 ),
               ),
-            ),
+              const SizedBox(height: 18),
+              Text(
+                'I miei pass',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              reservationsAsync.when(
+                data: (reservations) {
+                  if (reservations.isEmpty) {
+                    return const EmptyStateCard(
+                      title: 'Ancora nessun pass',
+                      message:
+                          'Quando prenoti una serata, il tuo QR apparira qui.',
+                    );
+                  }
+
+                  return Column(
+                    children: reservations
+                        .take(4)
+                        .map(
+                          (reservation) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Card(
+                              child: ListTile(
+                                onTap: () =>
+                                    context.push('/wallet/${reservation.id}'),
+                                title: Text(reservation.eventTitle),
+                                subtitle: Text(
+                                  '${reservation.venueName}  ${DateFormat('EEE d MMM, HH:mm', 'it_IT').format(reservation.startsAt)}',
+                                ),
+                                trailing: RadarChip(label: reservation.status),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
+                error: (error, stackTrace) => EmptyStateCard(
+                  title: 'Wallet non disponibile',
+                  message: error.toString(),
+                ),
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -176,18 +183,13 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
     }
 
     return events
-        .where(
-          (event) => event.musicTags.contains(_selectedFilter),
-        )
+        .where((event) => event.musicTags.contains(_selectedFilter))
         .toList();
   }
 }
 
 class _EventCard extends StatelessWidget {
-  const _EventCard({
-    required this.event,
-    required this.onTap,
-  });
+  const _EventCard({required this.event, required this.onTap});
 
   final EventSummary event;
   final VoidCallback onTap;
@@ -209,17 +211,14 @@ class _EventCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
                 child: event.coverImageUrl == null
-                    ? Container(
-                        color: const Color(0xFFEDE5DD),
-                      )
-                    : Image.network(
-                        event.coverImageUrl!,
-                        fit: BoxFit.cover,
-                      ),
+                    ? Container(color: const Color(0xFFEDE5DD))
+                    : Image.network(event.coverImageUrl!, fit: BoxFit.cover),
               ),
             ),
             Padding(

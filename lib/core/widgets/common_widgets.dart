@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 
 class ResponsivePage extends StatelessWidget {
-  const ResponsivePage({
-    super.key,
-    required this.child,
-    this.maxWidth = 760,
-  });
+  const ResponsivePage({super.key, required this.child, this.maxWidth = 760});
 
   final Widget child;
   final double maxWidth;
@@ -48,30 +44,65 @@ class NightRadarHero extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(30),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1A18130F),
+                blurRadius: 28,
+                offset: Offset(0, 16),
+              ),
+            ],
           ),
-          child: compact
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (trailing != null) ...[
-                      trailing!,
-                      const SizedBox(height: 16),
-                    ],
-                    _HeroText(title: title, subtitle: subtitle),
-                  ],
-                )
-              : Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _HeroText(title: title, subtitle: subtitle),
-                    ),
-                    if (trailing != null) ...[
-                      const SizedBox(width: 16),
-                      trailing!,
-                    ],
-                  ],
+          child: Stack(
+            children: [
+              Positioned(
+                top: -30,
+                right: -10,
+                child: Container(
+                  height: 120,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
                 ),
+              ),
+              Positioned(
+                bottom: -36,
+                left: -18,
+                child: Container(
+                  height: 110,
+                  width: 110,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              compact
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (trailing != null) ...[
+                          trailing!,
+                          const SizedBox(height: 16),
+                        ],
+                        _HeroText(title: title, subtitle: subtitle),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _HeroText(title: title, subtitle: subtitle),
+                        ),
+                        if (trailing != null) ...[
+                          const SizedBox(width: 16),
+                          trailing!,
+                        ],
+                      ],
+                    ),
+            ],
+          ),
         );
       },
     );
@@ -79,10 +110,7 @@ class NightRadarHero extends StatelessWidget {
 }
 
 class _HeroText extends StatelessWidget {
-  const _HeroText({
-    required this.title,
-    required this.subtitle,
-  });
+  const _HeroText({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
@@ -95,16 +123,16 @@ class _HeroText extends StatelessWidget {
         Text(
           title,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: Colors.white,
-                height: 1.05,
-              ),
+            color: Colors.white,
+            height: 1.05,
+          ),
         ),
         const SizedBox(height: 12),
         Text(
           subtitle,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.white.withValues(alpha: 0.88),
-              ),
+            color: Colors.white.withValues(alpha: 0.88),
+          ),
         ),
       ],
     );
@@ -153,11 +181,7 @@ class ResponsiveActionRow extends StatelessWidget {
 }
 
 class MetricCard extends StatelessWidget {
-  const MetricCard({
-    super.key,
-    required this.label,
-    required this.value,
-  });
+  const MetricCard({super.key, required this.label, required this.value});
 
   final String label;
   final String value;
@@ -169,14 +193,19 @@ class MetricCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE9DDD1)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1018130F),
+            blurRadius: 20,
+            offset: Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            value,
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
+          Text(value, style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 8),
           Text(label),
         ],
@@ -186,10 +215,7 @@ class MetricCard extends StatelessWidget {
 }
 
 class RadarChip extends StatelessWidget {
-  const RadarChip({
-    super.key,
-    required this.label,
-  });
+  const RadarChip({super.key, required this.label});
 
   final String label;
 
@@ -222,11 +248,7 @@ class RadarChip extends StatelessWidget {
 }
 
 class EmptyStateCard extends StatelessWidget {
-  const EmptyStateCard({
-    super.key,
-    required this.title,
-    required this.message,
-  });
+  const EmptyStateCard({super.key, required this.title, required this.message});
 
   final String title;
   final String message;
@@ -237,17 +259,26 @@ class EmptyStateCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            Container(
+              height: 10,
+              width: 64,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFE85D3F), Color(0xFF186B5B)],
+                ),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(height: 18),
             Text(
               title,
               style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 10),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-            ),
+            Text(message, textAlign: TextAlign.center),
           ],
         ),
       ),

@@ -10,6 +10,7 @@ import '../features/events/presentation/reservation_form_screen.dart';
 import '../features/events/presentation/user_home_screen.dart';
 import '../features/events/presentation/wallet_screen.dart';
 import '../features/promoter/promoter_dashboard_screen.dart';
+import '../features/public/public_home_screen.dart';
 import '../shared/models.dart';
 import 'app_providers.dart';
 
@@ -24,31 +25,34 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final signedIn = client.auth.currentSession != null;
       final isAuthRoute = state.matchedLocation == '/auth';
+      final isPublicRoute =
+          state.matchedLocation == '/' ||
+          isAuthRoute ||
+          state.fullPath == '/event/:eventId';
 
-      if (!signedIn && !isAuthRoute) {
-        return '/auth';
+      if (!signedIn && !isPublicRoute) {
+        final from = Uri.encodeComponent(state.uri.toString());
+        return '/auth?from=$from';
       }
 
       if (signedIn && isAuthRoute) {
-        return '/';
+        final from = state.uri.queryParameters['from'];
+        if (from != null && from.isNotEmpty && from != '/auth') {
+          return from;
+        }
+        return '/app';
       }
 
       return null;
     },
     routes: [
-      GoRoute(
-        path: '/auth',
-        builder: (context, state) => const AuthScreen(),
-      ),
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const RoleLandingScreen(),
-      ),
+      GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
+      GoRoute(path: '/', builder: (context, state) => const PublicHomeScreen()),
+      GoRoute(path: '/app', builder: (context, state) => const AppHomeScreen()),
       GoRoute(
         path: '/event/:eventId',
-        builder: (context, state) => EventDetailScreen(
-          eventId: state.pathParameters['eventId']!,
-        ),
+        builder: (context, state) =>
+            EventDetailScreen(eventId: state.pathParameters['eventId']!),
       ),
       GoRoute(
         path: '/event/:eventId/reserve',
@@ -59,9 +63,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/wallet/:reservationId',
-        builder: (context, state) => WalletScreen(
-          reservationId: state.pathParameters['reservationId']!,
-        ),
+        builder: (context, state) =>
+            WalletScreen(reservationId: state.pathParameters['reservationId']!),
       ),
       GoRoute(
         path: '/promoter',
@@ -71,8 +74,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-class RoleLandingScreen extends ConsumerWidget {
-  const RoleLandingScreen({super.key});
+class AppHomeScreen extends ConsumerWidget {
+  const AppHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -90,10 +93,8 @@ class RoleLandingScreen extends ConsumerWidget {
           _ => const UserHomeScreen(),
         };
       },
-      error: (error, stackTrace) => _RouteStatusView(
-        title: 'Errore profilo',
-        message: error.toString(),
-      ),
+      error: (error, stackTrace) =>
+          _RouteStatusView(title: 'Errore profilo', message: error.toString()),
       loading: () => const _RouteStatusView(
         title: 'NightRadar',
         message: 'Sto preparando la tua area.',
@@ -144,10 +145,7 @@ class _RouteStatusView extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-              ),
+              Text(message, textAlign: TextAlign.center),
             ],
           ),
         ),
