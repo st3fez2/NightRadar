@@ -90,10 +90,8 @@ class PublicHomeScreen extends ConsumerWidget {
                                     en: 'Main page with QR always ready',
                                   ),
                                   subtitle: copy.text(
-                                    it:
-                                        'Questo e il link pubblico ufficiale da condividere, scaricare o aprire su Android, iPhone e web.',
-                                    en:
-                                        'This is the official public link to share, download, or open on Android, iPhone, and web.',
+                                    it: 'Questo e il link pubblico ufficiale da condividere, scaricare o aprire su Android, iPhone e web.',
+                                    en: 'This is the official public link to share, download, or open on Android, iPhone, and web.',
                                   ),
                                 ),
                               ],
@@ -125,10 +123,8 @@ class PublicHomeScreen extends ConsumerWidget {
                                     en: 'Main page with QR always ready',
                                   ),
                                   subtitle: copy.text(
-                                    it:
-                                        'Condividi il sito live, scarica il QR o apri subito la versione pubblica mobile-first del progetto.',
-                                    en:
-                                        'Share the live site, download the QR, or open the public mobile-first version of the product right away.',
+                                    it: 'Condividi il sito live, scarica il QR o apri subito la versione pubblica mobile-first del progetto.',
+                                    en: 'Share the live site, download the QR, or open the public mobile-first version of the product right away.',
                                   ),
                                 ),
                               ),
@@ -137,45 +133,6 @@ class PublicHomeScreen extends ConsumerWidget {
                         },
                       ),
                       const SizedBox(height: 20),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: [
-                          _ValueCard(
-                            title: copy.text(it: 'Per i PR', en: 'For promoters'),
-                            description: copy.text(
-                              it:
-                                  'Crei eventi, chiudi le liste, esporti in testo puro e giri tutto su WhatsApp senza passaggi inutili.',
-                              en:
-                                  'Create events, close lists, export plain text, and forward everything on WhatsApp without extra steps.',
-                            ),
-                            accent: Color(0xFFE85D3F),
-                            icon: Icons.campaign_rounded,
-                          ),
-                          _ValueCard(
-                            title: copy.text(it: 'Per gli utenti', en: 'For users'),
-                            description: copy.text(
-                              it:
-                                  'Scopri serate, confronti offerte e tieni il QR personale sempre a portata di mano.',
-                              en:
-                                  'Discover nights out, compare offers, and keep your personal QR always within reach.',
-                            ),
-                            accent: Color(0xFF186B5B),
-                            icon: Icons.qr_code_2_rounded,
-                          ),
-                          _ValueCard(
-                            title: copy.text(it: 'Per il locale', en: 'For venues'),
-                            description: copy.text(
-                              it:
-                                  'Riceve solo la lista finale pronta, senza dashboard dedicata e senza attriti operativi.',
-                              en:
-                                  'Receives only the final ready-to-use list, with no dedicated dashboard and no operational friction.',
-                            ),
-                            accent: Color(0xFF18130F),
-                            icon: Icons.inventory_2_outlined,
-                          ),
-                        ],
-                      ),
                       if (AppFlavorConfig.isDemo) ...[
                         const SizedBox(height: 16),
                         const FlavorNoticeCard(),
@@ -222,10 +179,8 @@ class PublicHomeScreen extends ConsumerWidget {
                                     const SizedBox(height: 4),
                                     Text(
                                       copy.text(
-                                        it:
-                                            'NightRadar richiede accettazione iniziale e lascia i testi legali sempre riapribili dal web pubblico.',
-                                        en:
-                                            'NightRadar requires initial acceptance and keeps the legal texts always accessible again from the public web page.',
+                                        it: 'NightRadar richiede accettazione iniziale e lascia i testi legali sempre riapribili dal web pubblico.',
+                                        en: 'NightRadar requires initial acceptance and keeps the legal texts always accessible again from the public web page.',
                                       ),
                                     ),
                                   ],
@@ -248,10 +203,8 @@ class PublicHomeScreen extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Text(
                         copy.text(
-                          it:
-                              'Landing pubblica ottimizzata per mobile: accesso rapido, look piu deciso e CTA chiare per utenti e PR.',
-                          en:
-                              'Public landing optimized for mobile: faster access, a sharper look, and clearer CTAs for users and promoters.',
+                          it: 'Landing pubblica ottimizzata per mobile: accesso rapido, look piu deciso e CTA chiare per utenti e PR.',
+                          en: 'Public landing optimized for mobile: faster access, a sharper look, and clearer CTAs for users and promoters.',
                         ),
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
@@ -265,10 +218,8 @@ class PublicHomeScreen extends ConsumerWidget {
                                 en: 'No public events right now',
                               ),
                               message: copy.text(
-                                it:
-                                    'La landing resta pronta con QR e link pubblico, ma non ci sono eventi attivi da mostrare adesso.',
-                                en:
-                                    'The landing stays ready with QR and public link, but there are no active events to show right now.',
+                                it: 'La landing resta pronta con QR e link pubblico, ma non ci sono eventi attivi da mostrare adesso.',
+                                en: 'The landing stays ready with QR and public link, but there are no active events to show right now.',
                               ),
                             );
                           }
@@ -368,15 +319,10 @@ class _PublicHero extends StatelessWidget {
             children: [
               _HeroTag(
                 label: profile == null
-                    ? copy.text(
-                        it: 'WEB MOBILE FIRST',
-                        en: 'WEB MOBILE FIRST',
-                      )
+                    ? copy.text(it: 'WEB MOBILE FIRST', en: 'WEB MOBILE FIRST')
                     : copy.text(
-                        it:
-                            'BENTORNATO ${firstName?.toUpperCase() ?? 'NIGHTRADAR'}',
-                        en:
-                            'WELCOME BACK ${firstName?.toUpperCase() ?? 'NIGHTRADAR'}',
+                        it: 'BENTORNATO ${firstName?.toUpperCase() ?? 'NIGHTRADAR'}',
+                        en: 'WELCOME BACK ${firstName?.toUpperCase() ?? 'NIGHTRADAR'}',
                       ),
               ),
               if (AppFlavorConfig.isDemo)
@@ -393,16 +339,12 @@ class _PublicHero extends StatelessWidget {
           Text(
             AppFlavorConfig.isDemo
                 ? copy.text(
-                    it:
-                        'NightRadar Demo mostra utenti e PR in una vetrina rapida, pensata per farti capire il prodotto in pochi tocchi.',
-                    en:
-                        'NightRadar Demo shows users and promoters in a quick showcase built to explain the product in just a few taps.',
+                    it: 'NightRadar Demo mostra utenti e PR in una vetrina rapida, pensata per farti capire il prodotto in pochi tocchi.',
+                    en: 'NightRadar Demo shows users and promoters in a quick showcase built to explain the product in just a few taps.',
                   )
                 : copy.text(
-                    it:
-                        'NightRadar unisce PR e utenti in una home pubblica pronta da condividere.',
-                    en:
-                        'NightRadar brings promoters and users together in a public home page ready to share.',
+                    it: 'NightRadar unisce PR e utenti in una home pubblica pronta da condividere.',
+                    en: 'NightRadar brings promoters and users together in a public home page ready to share.',
                   ),
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               color: Colors.white,
@@ -414,16 +356,12 @@ class _PublicHero extends StatelessWidget {
           Text(
             AppFlavorConfig.isDemo
                 ? copy.text(
-                    it:
-                        'QR sempre visibile, account demo pronti e navigazione read-only. Quando vuoi lavorare davvero su eventi, liste e prenotazioni, passi alla versione attiva.',
-                    en:
-                        'QR always visible, demo accounts ready, and read-only navigation. When you want to work for real on events, lists, and reservations, switch to the live version.',
+                    it: 'QR sempre visibile, account demo pronti e navigazione read-only. Quando vuoi lavorare davvero su eventi, liste e prenotazioni, passi alla versione attiva.',
+                    en: 'QR always visible, demo accounts ready, and read-only navigation. When you want to work for real on events, lists, and reservations, switch to the live version.',
                   )
                 : copy.text(
-                    it:
-                        'QR sempre visibile, link pubblico unico, esperienza piu rapida su Android e iPhone, con area operativa separata per PR e consumer.',
-                    en:
-                        'QR always visible, one public link, faster experience on Android and iPhone, with a separate operational area for promoters and users.',
+                    it: 'QR sempre visibile, link pubblico unico, esperienza piu rapida su Android e iPhone, con area operativa separata per PR e consumer.',
+                    en: 'QR always visible, one public link, faster experience on Android and iPhone, with a separate operational area for promoters and users.',
                   ),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Colors.white.withValues(alpha: 0.82),
@@ -462,10 +400,7 @@ class _PublicHero extends StatelessWidget {
                     onPressed: onSecondaryTap,
                     icon: const Icon(Icons.local_activity_outlined),
                     label: Text(
-                      copy.text(
-                        it: 'Guarda una serata',
-                        en: 'View an event',
-                      ),
+                      copy.text(it: 'Guarda una serata', en: 'View an event'),
                     ),
                   ),
                 ),
@@ -570,60 +505,6 @@ class _SignalStat extends StatelessWidget {
   }
 }
 
-class _ValueCard extends StatelessWidget {
-  const _ValueCard({
-    required this.title,
-    required this.description,
-    required this.accent,
-    required this.icon,
-  });
-
-  final String title;
-  final String description;
-  final Color accent;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 340,
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: const Color(0xFFE9DDD1)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1018130F),
-              blurRadius: 20,
-              offset: Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              height: 48,
-              width: 48,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, color: accent),
-            ),
-            const SizedBox(height: 16),
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(description),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _LandingEventCard extends StatelessWidget {
   const _LandingEventCard({required this.event, required this.onTap});
 
@@ -675,9 +556,7 @@ class _LandingEventCard extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   if (event.minimumAge != null)
-                    Chip(
-                      label: Text(copy.minimumAgeLabel(event.minimumAge)),
-                    ),
+                    Chip(label: Text(copy.minimumAgeLabel(event.minimumAge))),
                   for (final tag in event.musicTags.take(3))
                     Chip(label: Text(tag)),
                 ],

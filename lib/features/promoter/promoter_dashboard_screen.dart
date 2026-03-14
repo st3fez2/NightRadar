@@ -160,41 +160,79 @@ class PromoterDashboardScreen extends ConsumerWidget {
                   ResponsiveActionRow(
                     children: [
                       ElevatedButton.icon(
-                        onPressed:
-                            !AppFlavorConfig.allowMutations ||
-                                dashboard.venues.isEmpty
+                        onPressed: !AppFlavorConfig.allowMutations
                             ? null
-                            : () => _openCreateEventDialog(
-                                context,
-                                ref,
-                                dashboard,
-                              ),
+                            : () {
+                                if (dashboard.venues.isEmpty) {
+                                  _showActionBlockedDialog(
+                                    context,
+                                    title: copy.text(
+                                      it: 'Serve un locale collegato',
+                                      en: 'A linked venue is required',
+                                    ),
+                                    message: copy.text(
+                                      it: 'Per pubblicare una serata devi prima collegare il tuo profilo PR ad almeno un locale partner. Appena il locale e attivo nella tua dashboard, qui potrai creare eventi, tavoli e liste.',
+                                      en: 'To publish a night, your promoter profile must first be linked to at least one partner venue. As soon as a venue is active in your dashboard, you can create events, tables, and lists here.',
+                                    ),
+                                  );
+                                  return;
+                                }
+                                _openCreateEventDialog(context, ref, dashboard);
+                              },
                         icon: const Icon(Icons.add_circle_outline_rounded),
                         label: Text(
                           copy.text(it: 'Nuovo evento', en: 'New event'),
                         ),
                       ),
                       OutlinedButton.icon(
-                        onPressed:
-                            !AppFlavorConfig.allowMutations ||
-                                dashboard.events.isEmpty
+                        onPressed: !AppFlavorConfig.allowMutations
                             ? null
-                            : () => _openOfferDialog(context, ref, dashboard),
+                            : () {
+                                if (dashboard.events.isEmpty) {
+                                  _showActionBlockedDialog(
+                                    context,
+                                    title: copy.text(
+                                      it: 'Crea prima una serata',
+                                      en: 'Create an event first',
+                                    ),
+                                    message: copy.text(
+                                      it: 'Le liste e i tavoli si aprono dentro una serata. Appena hai un evento pubblicato, da qui potrai creare tavoli, liste ridotte o accrediti.',
+                                      en: 'Guest lists and tables live inside an event. As soon as you have a published event, you can create tables, reduced lists, or guest access here.',
+                                    ),
+                                  );
+                                  return;
+                                }
+                                _openOfferDialog(context, ref, dashboard);
+                              },
                         icon: const Icon(Icons.playlist_add_rounded),
                         label: Text(
                           copy.text(it: 'Nuova lista', en: 'New list'),
                         ),
                       ),
                       OutlinedButton.icon(
-                        onPressed:
-                            !AppFlavorConfig.allowMutations ||
-                                dashboard.events.isEmpty
+                        onPressed: !AppFlavorConfig.allowMutations
                             ? null
-                            : () => _openAddReservationDialog(
-                                context,
-                                ref,
-                                dashboard,
-                              ),
+                            : () {
+                                if (dashboard.events.isEmpty) {
+                                  _showActionBlockedDialog(
+                                    context,
+                                    title: copy.text(
+                                      it: 'Manca una serata attiva',
+                                      en: 'An event is required',
+                                    ),
+                                    message: copy.text(
+                                      it: 'Per aggiungere nominativi manuali serve almeno una serata. Pubblica prima un evento, poi potrai inserire ospiti e tavoli dalla dashboard PR.',
+                                      en: 'Manual guest entries require at least one event. Publish an event first, then you can add guests and tables from the promoter dashboard.',
+                                    ),
+                                  );
+                                  return;
+                                }
+                                _openAddReservationDialog(
+                                  context,
+                                  ref,
+                                  dashboard,
+                                );
+                              },
                         icon: const Icon(Icons.person_add_alt_1_rounded),
                         label: Text(
                           copy.text(
@@ -206,6 +244,19 @@ class PromoterDashboardScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
+                  if (dashboard.venues.isEmpty) ...[
+                    _PromoterSetupCard(
+                      title: copy.text(
+                        it: 'Setup PR incompleto',
+                        en: 'Promoter setup incomplete',
+                      ),
+                      message: copy.text(
+                        it: 'La tua scheda PR e gia attiva, ma per pubblicare eventi e aprire tavoli o liste devi avere almeno un locale collegato. Finche il locale non e associato, la parte operativa resta in sola consultazione.',
+                        en: 'Your promoter card is already active, but to publish events and open tables or guest lists you need at least one linked venue. Until a venue is attached, the operational part stays view-only.',
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                   Text(
                     copy.text(it: 'Locali collegati', en: 'Linked venues'),
                     style: Theme.of(context).textTheme.titleLarge,
@@ -1529,6 +1580,27 @@ class PromoterDashboardScreen extends ConsumerWidget {
           },
         );
       },
+    );
+  }
+
+  void _showActionBlockedDialog(
+    BuildContext context, {
+    required String title,
+    required String message,
+  }) {
+    final copy = context.copy;
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(copy.text(it: 'Ok', en: 'Ok')),
+          ),
+        ],
+      ),
     );
   }
 
@@ -3311,6 +3383,44 @@ class _DashboardModeCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PromoterSetupCard extends StatelessWidget {
+  const _PromoterSetupCard({required this.title, required this.message});
+
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F1EA),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE0D2C4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.storefront_outlined, color: theme.colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: theme.textTheme.titleMedium),
+                const SizedBox(height: 6),
+                Text(message),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
