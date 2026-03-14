@@ -29,8 +29,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) {
       final signedIn = client.auth.currentSession != null;
+      final isAnonymousSession = client.auth.currentUser?.isAnonymous == true;
       final isAuthRoute = state.matchedLocation == '/auth';
       final isLegalRoute = state.matchedLocation == '/legal';
+      final hasExplicitAuthMode =
+          state.uri.queryParameters['mode']?.trim().isNotEmpty == true ||
+          state.uri.queryParameters['oauth_role']?.trim().isNotEmpty == true;
       final isPublicRoute =
           state.matchedLocation == '/' ||
           state.matchedLocation == '/app' ||
@@ -50,7 +54,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (signedIn && isAuthRoute) {
-        if (state.uri.queryParameters['oauth_role'] == 'promoter') {
+        if (isAnonymousSession || hasExplicitAuthMode) {
           return null;
         }
         final from = state.uri.queryParameters['from'];
