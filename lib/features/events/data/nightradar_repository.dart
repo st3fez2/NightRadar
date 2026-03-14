@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/app_flavor.dart';
+import '../../../core/supabase_config.dart';
 import '../../../shared/legal_constants.dart';
 import '../../../shared/models.dart';
 
@@ -360,7 +361,7 @@ class NightRadarRepository {
     final email = reservation.guestEmail?.trim();
     if (email != null && email.isNotEmpty) {
       try {
-        await _client.functions.invoke(
+        await _invokePublicFunction(
           'send-reservation-receipt-email',
           body: {
             'toEmail': email,
@@ -941,7 +942,7 @@ class NightRadarRepository {
     }
 
     try {
-      await _client.functions.invoke(
+      await _invokePublicFunction(
         'send-promoter-request-email',
         body: {
           'toEmail': promoterEmail,
@@ -981,9 +982,23 @@ class NightRadarRepository {
     required String eventId,
     required String viewerToken,
   }) async {
-    await _client.functions.invoke(
+    await _invokePublicFunction(
       'toggle-event-like',
       body: {'eventId': eventId, 'viewerToken': viewerToken},
+    );
+  }
+
+  Future<void> _invokePublicFunction(
+    String functionName, {
+    Object? body,
+  }) async {
+    await _client.functions.invoke(
+      functionName,
+      headers: {
+        'apikey': SupabaseConfig.anonKey,
+        'Authorization': 'Bearer ${SupabaseConfig.anonKey}',
+      },
+      body: body,
     );
   }
 
