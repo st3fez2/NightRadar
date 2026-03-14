@@ -80,6 +80,7 @@ class NightRadarRepository {
     required String email,
     required String password,
     AppRole role = AppRole.user,
+    String? emailRedirectTo,
   }) {
     _ensureMutationsAllowed(
       'La registrazione completa e disponibile solo nella versione attiva.',
@@ -90,6 +91,7 @@ class NightRadarRepository {
     return _client.auth.signUp(
       email: email,
       password: password,
+      emailRedirectTo: emailRedirectTo,
       data: {
         'full_name': fullName,
         'requested_role': role == AppRole.promoter ? 'promoter' : 'user',

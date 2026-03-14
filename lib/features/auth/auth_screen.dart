@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/app_copy.dart';
 import '../../core/app_flavor.dart';
 import '../../core/app_providers.dart';
+import '../../core/public_link_config.dart';
 import '../../core/widgets/brand_lockup.dart';
 import '../../core/widgets/flavor_notice_card.dart';
 import '../../core/widgets/language_toggle.dart';
@@ -1047,6 +1048,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       return;
     }
 
+    final postAuthTarget = _resolvedPostAuthTarget();
+
     setState(() {
       _isSubmitting = true;
       _errorText = null;
@@ -1061,6 +1064,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
           role: _isPromoterSignUp ? AppRole.promoter : AppRole.user,
+          emailRedirectTo: _buildPublicRouteUrl(postAuthTarget),
         );
 
         if (!mounted) {
@@ -1092,12 +1096,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       }
 
       if (mounted) {
-        final from = _currentRouteUri()?.queryParameters['from'];
-        context.go(
-          from != null && from.isNotEmpty && from != '/auth'
-              ? from
-              : _defaultPostAuthTarget(),
-        );
+        context.go(postAuthTarget);
       }
     } catch (error) {
       final message = _humanizeError(error);
@@ -1177,16 +1176,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     });
 
     try {
-      final baseUri = Uri.base;
-      final queryParameters = Map<String, String>.from(baseUri.queryParameters);
-      if (promoterSignupFlow) {
-        queryParameters['mode'] = 'promoter-signup';
-        queryParameters['oauth_role'] = 'promoter';
-        queryParameters['from'] = '/promoter';
-      }
-      final redirectTo = baseUri
-          .replace(queryParameters: queryParameters)
-          .toString();
+      final redirectRoute = promoterSignupFlow
+          ? Uri(
+              path: '/auth',
+              queryParameters: const {
+                'mode': 'promoter-signup',
+                'oauth_role': 'promoter',
+                'from': '/promoter',
+              },
+            ).toString()
+          : _resolvedPostAuthTarget();
+      final redirectTo = _buildPublicRouteUrl(redirectRoute);
       await ref
           .read(nightRadarRepositoryProvider)
           .signInWithGoogle(redirectTo: redirectTo);
@@ -1259,6 +1259,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   String _defaultPostAuthTarget() {
     return _isPromoterPane ? '/promoter' : '/app?area=user';
+  }
+
+  String _resolvedPostAuthTarget() {
+    final from = _currentRouteUri()?.queryParameters['from'];
+    if (from != null && from.isNotEmpty && from != '/auth') {
+      return from;
+    }
+    return _defaultPostAuthTarget();
+  }
+
+  String _buildPublicRouteUrl(String route) {
+    final baseUrl = PublicLinkConfig.resolveAppUrl();
+    final normalizedBase = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
+    final normalizedRoute = route.startsWith('/') ? route : '/$route';
+    return '$normalizedBase#$normalizedRoute';
   }
 
   String _heroBadgeLabel() {
