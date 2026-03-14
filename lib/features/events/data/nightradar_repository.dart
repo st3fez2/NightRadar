@@ -100,6 +100,38 @@ class NightRadarRepository {
     );
   }
 
+  Future<void> promoteCurrentUserToPromoter() async {
+    _ensureMutationsAllowed(
+      'La registrazione PR completa e disponibile solo nella versione attiva.',
+    );
+
+    final user = currentUser;
+    if (user == null) {
+      throw const AuthException('Utente non autenticato');
+    }
+
+    await _client
+        .from('profiles')
+        .update({'role': 'promoter'})
+        .eq('id', user.id);
+
+    for (var attempt = 0; attempt < 6; attempt++) {
+      final promoterRow = await _client
+          .from('promoters')
+          .select('id')
+          .eq('profile_id', user.id)
+          .maybeSingle();
+      if (promoterRow != null) {
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+
+    throw const AuthException(
+      'Non sono riuscito a completare il profilo PR. Riprova tra un attimo.',
+    );
+  }
+
   Future<void> resendSignupEmail({required String email}) {
     return _client.auth.resend(email: email, type: OtpType.signup);
   }

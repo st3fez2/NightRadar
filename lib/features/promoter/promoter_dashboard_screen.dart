@@ -84,6 +84,7 @@ class PromoterDashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   PublicLinkCard(
+                    compact: true,
                     title: copy.text(
                       it: 'Landing pubblica sempre pronta da girare',
                       en: 'Public landing always ready to share',

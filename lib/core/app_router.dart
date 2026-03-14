@@ -50,6 +50,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (signedIn && isAuthRoute) {
+        if (state.uri.queryParameters['oauth_role'] == 'promoter') {
+          return null;
+        }
         final from = state.uri.queryParameters['from'];
         if (from != null && from.isNotEmpty && from != '/auth') {
           return from;

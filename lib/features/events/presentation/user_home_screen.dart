@@ -92,6 +92,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
               ),
               const SizedBox(height: 18),
               PublicLinkCard(
+                compact: true,
                 title: copy.text(
                   it: 'Condividi NightRadar con il tuo gruppo',
                   en: 'Share NightRadar with your group',

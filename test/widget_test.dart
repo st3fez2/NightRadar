@@ -99,6 +99,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Registrazione PR automatica'), findsOneWidget);
+    expect(find.text('Registrati con Google come PR'), findsOneWidget);
     expect(find.text('Registrati come PR'), findsOneWidget);
   });
 

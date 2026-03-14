@@ -36,6 +36,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String? _lastRouteMode;
   bool _isSubmitting = false;
   bool _isResendingEmail = false;
+  bool _isCompletingPromoterGoogleSignup = false;
+  bool _hasProcessedPromoterGoogleSignup = false;
   String? _errorText;
   String? _pendingEmail;
   bool _pendingPromoterSignUp = false;
@@ -67,6 +69,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       return;
     }
     _lastRouteMode = routeMode;
+    if (uri.queryParameters['oauth_role'] != 'promoter') {
+      _hasProcessedPromoterGoogleSignup = false;
+    }
 
     final requestedPane = _paneFromUri(uri);
     final resolvedPane = AppFlavorConfig.isDemo
@@ -93,6 +98,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Widget build(BuildContext context) {
     final copy = context.copy;
     final theme = Theme.of(context);
+    final authUser = ref.watch(currentAuthUserProvider);
+
+    if (authUser != null &&
+        _currentRouteUri()?.queryParameters['oauth_role'] == 'promoter' &&
+        !_isCompletingPromoterGoogleSignup &&
+        !_hasProcessedPromoterGoogleSignup) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _completePromoterGoogleSignup();
+      });
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -173,6 +188,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 ),
                 const SizedBox(height: 20),
                 PublicLinkCard(
+                  compact: true,
                   title: copy.text(
                     it: 'QR pubblico sempre disponibile',
                     en: 'Public QR always available',
@@ -625,6 +641,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     BuildContext context, {
     required String title,
     required String subtitle,
+    bool promoterSignupFlow = false,
   }) {
     final copy = context.copy;
     final theme = Theme.of(context);
@@ -645,7 +662,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           Text(subtitle),
           const SizedBox(height: 14),
           ElevatedButton.icon(
-            onPressed: _isSubmitting ? null : _continueWithGoogle,
+            onPressed: _isSubmitting
+                ? null
+                : () => _continueWithGoogle(
+                    promoterSignupFlow: promoterSignupFlow,
+                  ),
             icon: const Icon(Icons.account_circle_outlined),
             label: Text(
               _isSubmitting
@@ -797,6 +818,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ],
             ),
           ),
+          if (!AppFlavorConfig.isDemo) ...[
+            const SizedBox(height: 18),
+            _buildGoogleAccessCard(
+              context,
+              title: copy.text(
+                it: 'Registrati con Google come PR',
+                en: 'Sign up with Google as promoter',
+              ),
+              subtitle: copy.text(
+                it: 'Se e il tuo primo accesso, Google crea l account e NightRadar completa subito il profilo promoter al rientro.',
+                en: 'If this is your first access, Google creates the account and NightRadar completes the promoter profile as soon as you come back.',
+              ),
+              promoterSignupFlow: true,
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(child: Divider(color: theme.dividerColor)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Text(copy.text(it: 'oppure', en: 'or')),
+                ),
+                Expanded(child: Divider(color: theme.dividerColor)),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
           TextFormField(
             controller: _fullNameController,
@@ -1111,14 +1158,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
-  Future<void> _continueWithGoogle() async {
+  Future<void> _continueWithGoogle({bool promoterSignupFlow = false}) async {
     setState(() {
       _isSubmitting = true;
       _errorText = null;
     });
 
     try {
-      final redirectTo = Uri.base.toString();
+      final baseUri = Uri.base;
+      final queryParameters = Map<String, String>.from(baseUri.queryParameters);
+      if (promoterSignupFlow) {
+        queryParameters['mode'] = 'promoter-signup';
+        queryParameters['oauth_role'] = 'promoter';
+        queryParameters['from'] = '/promoter';
+      }
+      final redirectTo = baseUri
+          .replace(queryParameters: queryParameters)
+          .toString();
       await ref
           .read(nightRadarRepositoryProvider)
           .signInWithGoogle(redirectTo: redirectTo);
@@ -1132,6 +1188,49 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     } finally {
       if (mounted) {
         setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _completePromoterGoogleSignup() async {
+    if (_isCompletingPromoterGoogleSignup) {
+      return;
+    }
+
+    setState(() {
+      _hasProcessedPromoterGoogleSignup = true;
+      _isCompletingPromoterGoogleSignup = true;
+      _isSubmitting = true;
+      _errorText = null;
+    });
+
+    try {
+      await ref
+          .read(nightRadarRepositoryProvider)
+          .promoteCurrentUserToPromoter();
+      ref.invalidate(currentProfileProvider);
+
+      if (!mounted) {
+        return;
+      }
+
+      final from = _currentRouteUri()?.queryParameters['from'];
+      context.go(
+        from != null && from.isNotEmpty && from != '/auth' ? from : '/promoter',
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _errorText = _humanizeError(error);
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCompletingPromoterGoogleSignup = false;
           _isSubmitting = false;
         });
       }
