@@ -11,9 +11,10 @@ import '../../core/widgets/language_toggle.dart';
 import '../../core/widgets/public_link_card.dart';
 
 enum _AuthPane {
-  signIn,
-  signUp,
+  userSignIn,
+  userSignUp,
   emailPending,
+  promoterAccess,
   promoterRequest,
   promoterRequestSent,
 }
@@ -36,13 +37,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _requestInstagramController = TextEditingController();
   final _requestNoteController = TextEditingController();
 
-  _AuthPane _pane = _AuthPane.signIn;
+  _AuthPane _pane = _AuthPane.userSignIn;
   bool _isSubmitting = false;
   bool _isResendingEmail = false;
   String? _errorText;
   String? _pendingEmail;
 
-  bool get _isSignUp => _pane == _AuthPane.signUp;
+  bool get _isUserSignUp => _pane == _AuthPane.userSignUp;
+  bool get _isPromoterPane =>
+      _pane == _AuthPane.promoterAccess ||
+      _pane == _AuthPane.promoterRequest ||
+      _pane == _AuthPane.promoterRequestSent;
 
   @override
   void dispose() {
@@ -215,17 +220,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                _buildAudienceSelector(context),
+                const SizedBox(height: 16),
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: switch (_pane) {
+                      _AuthPane.promoterAccess => _buildPromoterAccessCard(
+                        context,
+                      ),
                       _AuthPane.emailPending => _buildEmailPendingCard(context),
                       _AuthPane.promoterRequest => _buildPromoterRequestForm(
                         context,
                       ),
                       _AuthPane.promoterRequestSent =>
                         _buildPromoterRequestSentCard(context),
-                      _ => _buildAuthForm(context),
+                      _ => _buildUserAuthForm(context),
                     },
                   ),
                 ),
@@ -237,7 +247,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
-  Widget _buildAuthForm(BuildContext context) {
+  Widget _buildUserAuthForm(BuildContext context) {
     final copy = context.copy;
     final theme = Theme.of(context);
 
@@ -246,31 +256,47 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildModeChips(),
+          _buildUserModeChips(),
           const SizedBox(height: 18),
-          if (!AppFlavorConfig.isDemo && !_isSignUp) ...[
-            _buildGoogleAccessCard(context),
-            const SizedBox(height: 18),
-            Row(
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7F1EA),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE0D2C4)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: Divider(color: theme.dividerColor)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Text(copy.text(it: 'oppure', en: 'or')),
+                Text(
+                  copy.text(it: 'Accesso utente', en: 'User access'),
+                  style: theme.textTheme.titleMedium,
                 ),
-                Expanded(child: Divider(color: theme.dividerColor)),
+                const SizedBox(height: 8),
+                Text(
+                  _isUserSignUp
+                      ? copy.text(
+                          it: 'Crea il tuo profilo e poi entri nella tua area utente con serate, wallet e PR salvati.',
+                          en: 'Create your profile and then enter your user area with events, wallet, and saved promoters.',
+                        )
+                      : copy.text(
+                          it: 'Entra come utente per scoprire eventi, mettere like e prenotare in pochi tap.',
+                          en: 'Sign in as a user to discover events, leave likes, and reserve in a few taps.',
+                        ),
+                ),
               ],
             ),
-            const SizedBox(height: 18),
-          ],
-          if (_isSignUp) ...[
+          ),
+          const SizedBox(height: 18),
+          if (_isUserSignUp) ...[
             TextFormField(
               controller: _fullNameController,
               decoration: InputDecoration(
                 labelText: copy.text(it: 'Nome completo', en: 'Full name'),
               ),
               validator: (value) {
-                if (!_isSignUp) {
+                if (!_isUserSignUp) {
                   return null;
                 }
                 if (value == null || value.trim().length < 2) {
@@ -327,35 +353,35 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ),
             ),
           ],
+          Text(
+            _isUserSignUp
+                ? copy.text(
+                    it: 'Dopo la registrazione, se il progetto richiede conferma email, resti guidato qui fino alla verifica.',
+                    en: 'After sign-up, if the project requires email confirmation, you stay guided here until verification.',
+                  )
+                : copy.text(
+                    it: 'Se invece devi lavorare come PR, apri il percorso PR qui sopra per entrare direttamente nell area promoter o richiedere l attivazione.',
+                    en: 'If you need promoter access instead, switch to the promoter path above to enter the promoter area directly or request activation.',
+                  ),
+            style: theme.textTheme.bodySmall,
+          ),
           const SizedBox(height: 18),
           ElevatedButton(
             onPressed: _isSubmitting ? null : _submitAuthForm,
             child: Text(
               _isSubmitting
                   ? copy.text(it: 'Attendi...', en: 'Please wait...')
-                  : (_isSignUp
-                        ? copy.text(it: 'Crea account', en: 'Create account')
-                        : copy.text(it: 'Accedi', en: 'Sign in')),
+                  : (_isUserSignUp
+                        ? copy.text(
+                            it: 'Registrati come user',
+                            en: 'Sign up as user',
+                          )
+                        : copy.text(
+                            it: 'Accedi come user',
+                            en: 'Sign in as user',
+                          )),
             ),
           ),
-          if (_isSignUp) ...[
-            const SizedBox(height: 10),
-            Text(
-              copy.text(
-                it: 'Se il progetto richiede conferma email, dopo la registrazione ti porto direttamente alla schermata di verifica.',
-                en: 'If the project requires email confirmation, after sign-up I take you straight to the verification screen.',
-              ),
-              style: theme.textTheme.bodySmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              copy.text(
-                it: 'Per i PR il percorso consigliato resta Google, cosi il locale e gli altri PR vedono un profilo piu affidabile.',
-                en: 'For promoters the recommended path stays Google, so venues and other promoters see a more reliable profile.',
-              ),
-              style: theme.textTheme.bodySmall,
-            ),
-          ],
           const SizedBox(height: 18),
           if (AppFlavorConfig.isDemo) ...[
             Text(
@@ -393,7 +419,162 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
-  Widget _buildGoogleAccessCard(BuildContext context) {
+  Widget _buildPromoterAccessCard(BuildContext context) {
+    final copy = context.copy;
+    final theme = Theme.of(context);
+
+    return Form(
+      key: _authFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildPromoterModeChips(),
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7F1EA),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE0D2C4)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  copy.text(
+                    it: 'Accesso PR diretto',
+                    en: 'Direct promoter access',
+                  ),
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  copy.text(
+                    it: 'Se il tuo account PR e gia attivo, entri subito nell area promoter. Se non e ancora attivo, puoi inviare la richiesta dedicata qui accanto.',
+                    en: 'If your promoter account is already active, you enter the promoter area immediately. If it is not active yet, you can send the dedicated request here.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!AppFlavorConfig.isDemo) ...[
+            const SizedBox(height: 18),
+            _buildGoogleAccessCard(
+              context,
+              title: copy.text(
+                it: 'Continua con Google come PR',
+                en: 'Continue with Google as promoter',
+              ),
+              subtitle: copy.text(
+                it: 'Appena il canale PR e approvato, NightRadar ti autentica e ti porta direttamente nell area promoter.',
+                en: 'As soon as the promoter channel is approved, NightRadar authenticates you and brings you straight into the promoter area.',
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(child: Divider(color: theme.dividerColor)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Text(copy.text(it: 'oppure', en: 'or')),
+                ),
+                Expanded(child: Divider(color: theme.dividerColor)),
+              ],
+            ),
+          ],
+          const SizedBox(height: 18),
+          TextFormField(
+            controller: _emailController,
+            decoration: InputDecoration(
+              labelText: copy.text(it: 'Email PR', en: 'Promoter email'),
+            ),
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) {
+              if (value == null || !value.contains('@')) {
+                return copy.text(
+                  it: 'Inserisci un email valida',
+                  en: 'Enter a valid email',
+                );
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _passwordController,
+            decoration: InputDecoration(
+              labelText: copy.text(it: 'Password', en: 'Password'),
+            ),
+            obscureText: true,
+            validator: (value) {
+              if (value == null || value.length < 6) {
+                return copy.text(
+                  it: 'Minimo 6 caratteri',
+                  en: 'Minimum 6 characters',
+                );
+              }
+              return null;
+            },
+          ),
+          if (_errorText != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _errorText!,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          const SizedBox(height: 18),
+          ElevatedButton(
+            onPressed: _isSubmitting ? null : _submitAuthForm,
+            child: Text(
+              _isSubmitting
+                  ? copy.text(it: 'Attendi...', en: 'Please wait...')
+                  : copy.text(it: 'Accedi come PR', en: 'Sign in as promoter'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            copy.text(
+              it: 'Quando il profilo PR e attivo, l accesso ti porta direttamente nella dashboard promoter senza passaggi aggiuntivi.',
+              en: 'When the promoter profile is active, sign-in takes you straight to the promoter dashboard with no extra steps.',
+            ),
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 18),
+          if (AppFlavorConfig.isDemo) ...[
+            Text(
+              copy.text(it: 'Account demo', en: 'Demo accounts'),
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            _DemoChip(
+              label: 'PR',
+              email: 'promoter@nightradar.app',
+              onTap: _fillDemo,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              copy.text(
+                it: 'Password demo: NightRadar123!',
+                en: 'Demo password: NightRadar123!',
+              ),
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGoogleAccessCard(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+  }) {
     final copy = context.copy;
     final theme = Theme.of(context);
 
@@ -408,20 +589,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            copy.text(
-              it: 'Accesso Google per PR e utenti verificati',
-              en: 'Google access for promoters and verified users',
-            ),
-            style: theme.textTheme.titleMedium,
-          ),
+          Text(title, style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
-          Text(
-            copy.text(
-              it: 'Consigliato per i PR. Gli utenti che entrano con Google risultano piu affidabili nella lista rispetto al guest anonimo.',
-              en: 'Recommended for promoters. Users entering with Google look more reliable on the list than anonymous guests.',
-            ),
-          ),
+          Text(subtitle),
           const SizedBox(height: 14),
           ElevatedButton.icon(
             onPressed: _isSubmitting ? null : _continueWithGoogle,
@@ -498,7 +668,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ? null
               : () {
                   setState(() {
-                    _pane = _AuthPane.signIn;
+                    _pane = _AuthPane.userSignIn;
                     _errorText = null;
                   });
                 },
@@ -516,7 +686,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ? null
               : () {
                   setState(() {
-                    _pane = _AuthPane.signUp;
+                    _pane = _AuthPane.userSignUp;
                     _errorText = null;
                   });
                 },
@@ -537,7 +707,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildModeChips(),
+          _buildPromoterModeChips(),
           const SizedBox(height: 18),
           Text(
             copy.text(
@@ -685,11 +855,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         ElevatedButton(
           onPressed: () {
             setState(() {
-              _pane = _AuthPane.signIn;
+              _pane = _AuthPane.promoterAccess;
               _errorText = null;
             });
           },
-          child: Text(copy.text(it: 'Vai all accesso', en: 'Go to sign-in')),
+          child: Text(
+            copy.text(it: 'Vai all accesso PR', en: 'Go to promoter access'),
+          ),
         ),
         const SizedBox(height: 10),
         TextButton(
@@ -710,28 +882,78 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
-  Widget _buildModeChips() {
+  Widget _buildAudienceSelector(BuildContext context) {
+    final copy = context.copy;
+    return Row(
+      children: [
+        Expanded(
+          child: _AudienceCard(
+            icon: Icons.person_rounded,
+            title: copy.text(it: 'Sono un user', en: 'I am a user'),
+            subtitle: copy.text(
+              it: 'Accedo o mi registro per vedere serate, like e prenotazioni.',
+              en: 'I sign in or register to browse events, likes, and reservations.',
+            ),
+            selected: !_isPromoterPane,
+            onTap: () => _setPane(_AuthPane.userSignIn),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _AudienceCard(
+            icon: Icons.campaign_rounded,
+            title: 'Sono un PR',
+            subtitle: copy.text(
+              it: 'Entro direttamente nell area promoter oppure richiedo attivazione.',
+              en: 'I enter the promoter area directly or request activation.',
+            ),
+            selected: _isPromoterPane,
+            onTap: () => _setPane(_AuthPane.promoterAccess),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUserModeChips() {
     final copy = context.copy;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
         ChoiceChip(
-          label: Text(copy.text(it: 'Accedi', en: 'Sign in')),
-          selected: _pane == _AuthPane.signIn,
-          onSelected: (_) => _setPane(_AuthPane.signIn),
+          label: Text(copy.text(it: 'Accesso user', en: 'User sign-in')),
+          selected: _pane == _AuthPane.userSignIn,
+          onSelected: (_) => _setPane(_AuthPane.userSignIn),
         ),
         if (!AppFlavorConfig.isDemo)
           ChoiceChip(
-            label: Text(copy.text(it: 'Registrati', en: 'Sign up')),
-            selected: _pane == _AuthPane.signUp,
-            onSelected: (_) => _setPane(_AuthPane.signUp),
+            label: Text(
+              copy.text(it: 'Registrazione user', en: 'User sign-up'),
+            ),
+            selected: _pane == _AuthPane.userSignUp,
+            onSelected: (_) => _setPane(_AuthPane.userSignUp),
           ),
+      ],
+    );
+  }
+
+  Widget _buildPromoterModeChips() {
+    final copy = context.copy;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        ChoiceChip(
+          label: Text(copy.text(it: 'Accesso PR', en: 'Promoter access')),
+          selected: _pane == _AuthPane.promoterAccess,
+          onSelected: (_) => _setPane(_AuthPane.promoterAccess),
+        ),
         ChoiceChip(
           label: Text(
             copy.text(
-              it: 'Richiedi account PR',
-              en: 'Request promoter account',
+              it: 'Richiedi attivazione PR',
+              en: 'Request promoter activation',
             ),
           ),
           selected: _pane == _AuthPane.promoterRequest,
@@ -742,7 +964,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   void _setPane(_AuthPane pane) {
-    if (AppFlavorConfig.isDemo && pane == _AuthPane.signUp) {
+    if (AppFlavorConfig.isDemo && pane == _AuthPane.userSignUp) {
       return;
     }
 
@@ -765,7 +987,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final repository = ref.read(nightRadarRepositoryProvider);
 
     try {
-      if (_isSignUp) {
+      if (_isUserSignUp) {
         final response = await repository.signUp(
           fullName: _fullNameController.text.trim(),
           email: _emailController.text.trim(),
@@ -947,7 +1169,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String _heroBadgeLabel() {
     final copy = context.copy;
     return switch (_pane) {
-      _AuthPane.promoterRequest || _AuthPane.promoterRequestSent => copy.text(
+      _AuthPane.promoterAccess ||
+      _AuthPane.promoterRequest ||
+      _AuthPane.promoterRequestSent => copy.text(
         it: 'ACCESSO PR',
         en: 'PR ACCESS',
       ),
@@ -959,6 +1183,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String _heroTitle() {
     final copy = context.copy;
     return switch (_pane) {
+      _AuthPane.promoterAccess => copy.text(
+        it: 'Accesso e attivazione PR in un punto solo.',
+        en: 'Promoter access and activation in one place.',
+      ),
       _AuthPane.promoterRequest => copy.text(
         it: 'Apri il canale PR senza rompere il percorso semplice per gli utenti.',
         en: 'Open the promoter channel without breaking the simple path for users.',
@@ -981,6 +1209,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String _heroSubtitle() {
     final copy = context.copy;
     return switch (_pane) {
+      _AuthPane.promoterAccess => copy.text(
+        it: 'Se il profilo PR e gia attivo entri subito nella dashboard. Se non lo e ancora, da qui passi alla richiesta dedicata in modo chiaro.',
+        en: 'If the promoter profile is already active you go straight into the dashboard. If not, from here you move clearly into the dedicated request flow.',
+      ),
       _AuthPane.promoterRequest => copy.text(
         it: 'La registrazione normale resta per gli utenti. Per il ruolo PR raccogliamo una richiesta dedicata e poi l accesso consigliato passa da Google.',
         en: 'Standard sign-up stays for users. For the promoter role we collect a dedicated request and then the recommended access goes through Google.',
@@ -1034,6 +1266,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       );
     }
 
+    if (normalized.contains('account pr sospeso') ||
+        normalized.contains('promoter account suspended')) {
+      return copy.text(
+        it: 'Account PR sospeso. Contatta il supporto NightRadar.',
+        en: 'Promoter account suspended. Contact NightRadar support.',
+      );
+    }
+
     if (normalized.contains('user already registered')) {
       return copy.text(
         it: 'Questa email risulta gia registrata. Prova ad accedere.',
@@ -1054,11 +1294,77 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   void _fillDemo(String email) {
     setState(() {
-      _pane = _AuthPane.signIn;
+      _pane = email.contains('promoter')
+          ? _AuthPane.promoterAccess
+          : _AuthPane.userSignIn;
       _emailController.text = email;
       _passwordController.text = 'NightRadar123!';
       _errorText = null;
     });
+  }
+}
+
+class _AudienceCard extends StatelessWidget {
+  const _AudienceCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF18130F) : const Color(0xFFF7F1EA),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: selected ? const Color(0xFFE85D3F) : const Color(0xFFE0D2C4),
+            width: selected ? 1.6 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              icon,
+              color: selected
+                  ? const Color(0xFFFFC9BA)
+                  : const Color(0xFFE85D3F),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: selected ? Colors.white : null,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: selected ? Colors.white70 : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

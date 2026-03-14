@@ -140,7 +140,25 @@ class NightRadarRepository {
       return null;
     }
 
-    return AppProfile.fromMap(row);
+    final profileMap = Map<String, dynamic>.from(row);
+    if (AppRole.fromValue(profileMap['role'] as String?) == AppRole.promoter) {
+      final promoterRow = await _client
+          .from('promoters')
+          .select('is_suspended, suspended_at, suspension_reason')
+          .eq('profile_id', user.id)
+          .maybeSingle();
+
+      if (promoterRow != null) {
+        profileMap['promoter_is_suspended'] =
+            promoterRow['is_suspended'] as bool? ?? false;
+        profileMap['promoter_suspended_at'] =
+            promoterRow['suspended_at'] as String?;
+        profileMap['promoter_suspension_reason'] =
+            promoterRow['suspension_reason'] as String?;
+      }
+    }
+
+    return AppProfile.fromMap(profileMap);
   }
 
   Future<String?> getCurrentPromoterId() async {
@@ -151,11 +169,15 @@ class NightRadarRepository {
 
     final row = await _client
         .from('promoters')
-        .select('id')
+        .select('id, is_suspended')
         .eq('profile_id', user.id)
         .maybeSingle();
 
-    return row?['id'] as String?;
+    if (row == null || (row['is_suspended'] as bool?) == true) {
+      return null;
+    }
+
+    return row['id'] as String?;
   }
 
   Future<List<EventSummary>> fetchEventFeed() async {
@@ -422,7 +444,20 @@ class NightRadarRepository {
     final profile = await getCurrentProfile();
     final promoterId = await getCurrentPromoterId();
 
-    if (profile == null || promoterId == null) {
+    if (profile == null) {
+      throw const AuthException('Profilo PR non disponibile');
+    }
+
+    if (profile.isPromoterSuspended) {
+      final reason = profile.promoterSuspensionReason?.trim();
+      throw AuthException(
+        reason == null || reason.isEmpty
+            ? 'Account PR sospeso. Contatta il supporto NightRadar.'
+            : 'Account PR sospeso: $reason',
+      );
+    }
+
+    if (promoterId == null) {
       throw const AuthException('Profilo PR non disponibile');
     }
 

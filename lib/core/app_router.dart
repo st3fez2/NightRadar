@@ -86,7 +86,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/promoter',
-        builder: (context, state) => const PromoterDashboardScreen(),
+        builder: (context, state) => const PromoterAreaGate(),
       ),
     ],
   );
@@ -112,6 +112,12 @@ class AppHomeScreen extends ConsumerWidget {
           );
         }
 
+        if (profile.role == AppRole.promoter && profile.isPromoterSuspended) {
+          return PromoterSuspendedScreen(
+            reason: profile.promoterSuspensionReason,
+          );
+        }
+
         return switch (profile.role) {
           AppRole.promoter => const PromoterDashboardScreen(),
           AppRole.venueAdmin || AppRole.doorStaff => const _LegacyRoleScreen(),
@@ -129,6 +135,130 @@ class AppHomeScreen extends ConsumerWidget {
           en: 'Preparing your area.',
         ),
         loading: true,
+      ),
+    );
+  }
+}
+
+class PromoterAreaGate extends ConsumerWidget {
+  const PromoterAreaGate({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final copy = context.copy;
+    final profileAsync = ref.watch(currentProfileProvider);
+
+    return profileAsync.when(
+      data: (profile) {
+        if (profile == null) {
+          return const AuthScreen();
+        }
+
+        if (profile.isPromoterSuspended) {
+          return PromoterSuspendedScreen(
+            reason: profile.promoterSuspensionReason,
+          );
+        }
+
+        if (profile.role != AppRole.promoter) {
+          return _RouteStatusView(
+            title: copy.text(
+              it: 'Area PR non disponibile',
+              en: 'PR area unavailable',
+            ),
+            message: copy.text(
+              it: 'Questo account non ha un profilo PR attivo. Accedi come utente oppure attendi l attivazione del canale PR.',
+              en: 'This account does not have an active promoter profile. Sign in as a user or wait for promoter activation.',
+            ),
+          );
+        }
+
+        if (!profile.hasAcceptedLegalVersion(nightRadarLegalVersion)) {
+          return const LegalConsentScreen(
+            requireSignedInProfileAcceptance: true,
+          );
+        }
+
+        return const PromoterDashboardScreen();
+      },
+      error: (error, stackTrace) => _RouteStatusView(
+        title: copy.text(it: 'Errore area PR', en: 'Promoter area error'),
+        message: error.toString(),
+      ),
+      loading: () => _RouteStatusView(
+        title: 'NightRadar',
+        message: copy.text(
+          it: 'Sto preparando la tua area PR.',
+          en: 'Preparing your promoter area.',
+        ),
+        loading: true,
+      ),
+    );
+  }
+}
+
+class PromoterSuspendedScreen extends ConsumerWidget {
+  const PromoterSuspendedScreen({super.key, this.reason});
+
+  final String? reason;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final copy = context.copy;
+    final theme = Theme.of(context);
+    final cleanReason = reason?.trim();
+
+    return Scaffold(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.pause_circle_filled_rounded,
+                  size: 52,
+                  color: theme.colorScheme.error,
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  copy.text(
+                    it: 'Account PR sospeso',
+                    en: 'Promoter account suspended',
+                  ),
+                  style: theme.textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  cleanReason == null || cleanReason.isEmpty
+                      ? copy.text(
+                          it: 'L accesso all area promoter e temporaneamente bloccato. Contatta il supporto NightRadar per riattivare il profilo.',
+                          en: 'Access to the promoter area is temporarily blocked. Contact NightRadar support to reactivate the profile.',
+                        )
+                      : copy.text(
+                          it: 'L accesso all area promoter e temporaneamente bloccato. Motivo: $cleanReason',
+                          en: 'Access to the promoter area is temporarily blocked. Reason: $cleanReason',
+                        ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 18),
+                ElevatedButton(
+                  onPressed: () async {
+                    final client = ref.read(supabaseClientProvider);
+                    await client.auth.signOut();
+                    if (context.mounted) {
+                      context.go('/auth');
+                    }
+                  },
+                  child: Text(copy.text(it: 'Esci', en: 'Sign out')),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

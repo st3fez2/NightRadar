@@ -7,12 +7,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nightradar/core/local_preferences.dart';
 import 'package:nightradar/core/app_providers.dart';
+import 'package:nightradar/core/app_router.dart';
 import 'package:nightradar/core/widgets/common_widgets.dart';
 import 'package:nightradar/core/widgets/public_link_card.dart';
 import 'package:nightradar/features/auth/auth_screen.dart';
 import 'package:nightradar/features/events/presentation/user_home_screen.dart';
 import 'package:nightradar/features/legal/legal_consent_screen.dart';
 import 'package:nightradar/features/public/public_home_screen.dart';
+import 'package:nightradar/shared/legal_constants.dart';
 import 'package:nightradar/shared/models.dart';
 
 void main() {
@@ -53,19 +55,22 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
-      find.text('Registrati'),
+      find.text('Sono un user'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Registrati'), findsOneWidget);
-    expect(find.text('Richiedi account PR'), findsOneWidget);
+    expect(find.text('Sono un user'), findsOneWidget);
+    expect(find.text('Sono un PR'), findsOneWidget);
+    expect(find.text('Registrazione user'), findsOneWidget);
     expect(find.textContaining('user@nightradar.app'), findsNothing);
     expect(find.textContaining('promoter@nightradar.app'), findsNothing);
   });
 
-  testWidgets('auth screen exposes promoter request flow', (tester) async {
+  testWidgets('auth screen exposes dedicated promoter access flow', (
+    tester,
+  ) async {
     final sharedPreferences = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(
@@ -77,17 +82,56 @@ void main() {
     );
 
     await tester.scrollUntilVisible(
-      find.text('Richiedi account PR'),
+      find.text('Sono un PR'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Richiedi account PR'));
+    await tester.tap(find.text('Sono un PR'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Accesso PR diretto'), findsOneWidget);
+    expect(find.text('Accedi come PR'), findsOneWidget);
+    expect(find.text('Richiedi attivazione PR'), findsOneWidget);
+
+    await tester.tap(find.text('Richiedi attivazione PR'));
     await tester.pumpAndSettle();
 
     expect(find.text('Richiesta account PR'), findsOneWidget);
     expect(find.text('Invia richiesta PR'), findsOneWidget);
+  });
+
+  testWidgets('suspended promoter sees a blocked state instead of dashboard', (
+    tester,
+  ) async {
+    final sharedPreferences = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          currentProfileProvider.overrideWith(
+            (ref) async => AppProfile(
+              id: 'pr-1',
+              fullName: 'Marco Night',
+              role: AppRole.promoter,
+              disclaimerAcceptedAt: DateTime(2026, 3, 14),
+              privacyAcceptedAt: DateTime(2026, 3, 14),
+              legalVersion: nightRadarLegalVersion,
+              isPromoterSuspended: true,
+              promoterSuspensionReason: 'Verifica account in corso',
+            ),
+          ),
+        ],
+        child: buildTestApp(const AppHomeScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Account PR sospeso'), findsOneWidget);
+    expect(find.textContaining('Verifica account in corso'), findsOneWidget);
   });
 
   testWidgets('radar chip formats label for UI', (tester) async {

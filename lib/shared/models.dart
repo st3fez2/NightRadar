@@ -66,6 +66,9 @@ class AppProfile {
     this.disclaimerAcceptedAt,
     this.privacyAcceptedAt,
     this.legalVersion,
+    this.isPromoterSuspended = false,
+    this.promoterSuspendedAt,
+    this.promoterSuspensionReason,
   });
 
   final String id;
@@ -78,6 +81,9 @@ class AppProfile {
   final DateTime? disclaimerAcceptedAt;
   final DateTime? privacyAcceptedAt;
   final String? legalVersion;
+  final bool isPromoterSuspended;
+  final DateTime? promoterSuspendedAt;
+  final String? promoterSuspensionReason;
 
   factory AppProfile.fromMap(Map<String, dynamic> map) {
     return AppProfile(
@@ -93,6 +99,11 @@ class AppProfile {
       ),
       privacyAcceptedAt: _parseDateTime(map['privacy_accepted_at'] as String?),
       legalVersion: map['legal_version'] as String?,
+      isPromoterSuspended: map['promoter_is_suspended'] as bool? ?? false,
+      promoterSuspendedAt: _parseDateTime(
+        map['promoter_suspended_at'] as String?,
+      ),
+      promoterSuspensionReason: map['promoter_suspension_reason'] as String?,
     );
   }
 
@@ -101,6 +112,9 @@ class AppProfile {
         privacyAcceptedAt != null &&
         legalVersion == version;
   }
+
+  bool get canAccessPromoterArea =>
+      role == AppRole.promoter && !isPromoterSuspended;
 }
 
 class VenueInfo {
