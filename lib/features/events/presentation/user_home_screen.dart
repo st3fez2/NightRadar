@@ -33,6 +33,8 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
     final isVerifiedSession = authUser != null && !authUser.isAnonymous;
     final eventsAsync = ref.watch(eventFeedProvider);
     final profileAsync = ref.watch(currentProfileProvider);
+    final profile = profileAsync.valueOrNull;
+    final hasPromoterAccess = profile?.role == AppRole.promoter;
     final reservationsAsync = hasSession
         ? ref.watch(myReservationsProvider)
         : const AsyncValue.data(<ReservationRecord>[]);
@@ -75,14 +77,14 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
               NightRadarHero(
-                title: !isVerifiedSession || profileAsync.value == null
+                title: !isVerifiedSession || profile == null
                     ? copy.text(
                         it: 'Sei in due? Parti da stasera',
                         en: 'Going out as two? Start with tonight',
                       )
                     : copy.text(
-                        it: 'Ciao ${profileAsync.value!.fullName.split(' ').first}',
-                        en: 'Hi ${profileAsync.value!.fullName.split(' ').first}',
+                        it: 'Ciao ${profile.fullName.split(' ').first}',
+                        en: 'Hi ${profile.fullName.split(' ').first}',
                       ),
                 subtitle: copy.text(
                   it: 'Filtra per stasera o domani, resta dentro il tuo tempo auto stimato e tieni a portata i PR di cui ti fidi.',
@@ -90,6 +92,25 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                 ),
                 trailing: const RadarChip(label: 'active'),
               ),
+              if (hasPromoterAccess) ...[
+                const SizedBox(height: 12),
+                _AreaSwitchCard(
+                  title: copy.text(
+                    it: 'Stai entrando come utente',
+                    en: 'You are in user view',
+                  ),
+                  message: copy.text(
+                    it: 'Questo account ha anche accesso PR. Se vuoi gestire eventi, tavoli, liste e scheda promoter, apri la dashboard PR.',
+                    en: 'This account also has promoter access. Open the PR dashboard if you want to manage events, tables, guest lists, and your promoter card.',
+                  ),
+                  actionLabel: copy.text(
+                    it: 'Apri area PR',
+                    en: 'Open promoter area',
+                  ),
+                  onPressed: () => context.go('/promoter'),
+                  icon: Icons.campaign_outlined,
+                ),
+              ],
               if (!isVerifiedSession) ...[
                 const SizedBox(height: 12),
                 _AnonymousAccessCard(
@@ -104,7 +125,6 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
               const SizedBox(height: 18),
               eventsAsync.when(
                 data: (events) {
-                  final profile = profileAsync.valueOrNull;
                   final discoverableEvents = events
                       .where((event) => !event.isClosed)
                       .toList();
@@ -425,14 +445,32 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
               ),
               const SizedBox(height: 20),
               _PromoterEntryCard(
-                onSignIn: () => context.push(
-                  '/auth?mode=promoter-signin&from=${Uri.encodeComponent('/promoter')}',
-                ),
-                onSignUp: AppFlavorConfig.isDemo
+                onSignIn: hasPromoterAccess
+                    ? () => context.go('/promoter')
+                    : () => context.push(
+                        '/auth?mode=promoter-signin&from=${Uri.encodeComponent('/promoter')}',
+                      ),
+                onSignUp: hasPromoterAccess || AppFlavorConfig.isDemo
                     ? null
                     : () => context.push(
                         '/auth?mode=promoter-signup&from=${Uri.encodeComponent('/promoter')}',
                       ),
+                message: hasPromoterAccess
+                    ? copy.text(
+                        it: 'Questo account puo entrare sia in vista utente sia nella dashboard PR. Da qui apri direttamente la tua area promoter.',
+                        en: 'This account can open both the user view and the promoter dashboard. Use this shortcut to open your promoter area directly.',
+                      )
+                    : null,
+                signInLabel: copy.text(
+                  it: hasPromoterAccess ? 'Apri area PR' : 'Accedi come PR',
+                  en: hasPromoterAccess
+                      ? 'Open promoter area'
+                      : 'Sign in as promoter',
+                ),
+                signUpLabel: copy.text(
+                  it: 'Registrati come PR',
+                  en: 'Sign up as promoter',
+                ),
               ),
               const SizedBox(height: 16),
               PublicLinkCard(
@@ -707,10 +745,19 @@ class _AnonymousAccessCard extends StatelessWidget {
 }
 
 class _PromoterEntryCard extends StatelessWidget {
-  const _PromoterEntryCard({required this.onSignIn, this.onSignUp});
+  const _PromoterEntryCard({
+    required this.onSignIn,
+    this.onSignUp,
+    this.message,
+    this.signInLabel,
+    this.signUpLabel,
+  });
 
   final VoidCallback onSignIn;
   final VoidCallback? onSignUp;
+  final String? message;
+  final String? signInLabel;
+  final String? signUpLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -728,10 +775,11 @@ class _PromoterEntryCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              copy.text(
-                it: 'L accesso PR resta in fondo, separato dal percorso user: entri nella dashboard promoter oppure crei direttamente il tuo account PR.',
-                en: 'Promoter access stays at the bottom, separate from the user flow: enter the promoter dashboard or create your promoter account directly.',
-              ),
+              message ??
+                  copy.text(
+                    it: 'L accesso PR resta in fondo, separato dal percorso user: entri nella dashboard promoter oppure crei direttamente il tuo account PR.',
+                    en: 'Promoter access stays at the bottom, separate from the user flow: enter the promoter dashboard or create your promoter account directly.',
+                  ),
             ),
             const SizedBox(height: 14),
             ResponsiveActionRow(
@@ -740,7 +788,11 @@ class _PromoterEntryCard extends StatelessWidget {
                   onPressed: onSignIn,
                   icon: const Icon(Icons.campaign_outlined),
                   label: Text(
-                    copy.text(it: 'Accedi come PR', en: 'Sign in as promoter'),
+                    signInLabel ??
+                        copy.text(
+                          it: 'Accedi come PR',
+                          en: 'Sign in as promoter',
+                        ),
                   ),
                 ),
                 if (onSignUp != null)
@@ -748,13 +800,56 @@ class _PromoterEntryCard extends StatelessWidget {
                     onPressed: onSignUp,
                     icon: const Icon(Icons.person_add_alt_1_rounded),
                     label: Text(
-                      copy.text(
-                        it: 'Registrati come PR',
-                        en: 'Sign up as promoter',
-                      ),
+                      signUpLabel ??
+                          copy.text(
+                            it: 'Registrati come PR',
+                            en: 'Sign up as promoter',
+                          ),
                     ),
                   ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AreaSwitchCard extends StatelessWidget {
+  const _AreaSwitchCard({
+    required this.title,
+    required this.message,
+    required this.actionLabel,
+    required this.onPressed,
+    required this.icon,
+  });
+
+  final String title;
+  final String message;
+  final String actionLabel;
+  final VoidCallback onPressed;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(message),
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: onPressed,
+                icon: Icon(icon),
+                label: Text(actionLabel),
+              ),
             ),
           ],
         ),

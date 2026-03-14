@@ -83,6 +83,22 @@ class PromoterDashboardScreen extends ConsumerWidget {
                     trailing: const RadarChip(label: 'hot'),
                   ),
                   const SizedBox(height: 12),
+                  _DashboardModeCard(
+                    title: copy.text(
+                      it: 'Stai entrando come PR',
+                      en: 'You are in promoter view',
+                    ),
+                    message: copy.text(
+                      it: 'Con questo stesso account puoi anche aprire la vista utente per controllare eventi e schede PR come le vede chi esplora NightRadar.',
+                      en: 'With this same account you can also open the user view to inspect events and promoter cards exactly as a NightRadar explorer sees them.',
+                    ),
+                    actionLabel: copy.text(
+                      it: 'Apri vista utente',
+                      en: 'Open user view',
+                    ),
+                    onPressed: () => context.go('/app?area=user'),
+                  ),
+                  const SizedBox(height: 12),
                   _PromoterIdentityCard(
                     promoterCard: dashboard.promoterCard,
                     onEdit: AppFlavorConfig.allowMutations
@@ -3257,6 +3273,46 @@ class _PromoterEventCard extends StatelessWidget {
       return copy.text(it: 'Live ora', en: 'Live now');
     }
     return copy.text(it: 'Programmato', en: 'Scheduled');
+  }
+}
+
+class _DashboardModeCard extends StatelessWidget {
+  const _DashboardModeCard({
+    required this.title,
+    required this.message,
+    required this.actionLabel,
+    required this.onPressed,
+  });
+
+  final String title;
+  final String message;
+  final String actionLabel;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(message),
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: onPressed,
+                icon: const Icon(Icons.person_outline_rounded),
+                label: Text(actionLabel),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -74,7 +74,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             LegalConsentScreen(fromPath: state.uri.queryParameters['from']),
       ),
       GoRoute(path: '/', builder: (context, state) => const PublicHomeScreen()),
-      GoRoute(path: '/app', builder: (context, state) => const AppHomeScreen()),
+      GoRoute(
+        path: '/app',
+        builder: (context, state) =>
+            AppHomeScreen(preferredArea: state.uri.queryParameters['area']),
+      ),
       GoRoute(
         path: '/event/:eventId',
         builder: (context, state) =>
@@ -101,7 +105,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 });
 
 class AppHomeScreen extends ConsumerWidget {
-  const AppHomeScreen({super.key});
+  const AppHomeScreen({super.key, this.preferredArea});
+
+  final String? preferredArea;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -126,8 +132,13 @@ class AppHomeScreen extends ConsumerWidget {
           );
         }
 
+        final wantsUserArea = preferredArea == 'user';
+
         return switch (profile.role) {
-          AppRole.promoter => const PromoterDashboardScreen(),
+          AppRole.promoter =>
+            wantsUserArea
+                ? const UserHomeScreen()
+                : const PromoterDashboardScreen(),
           AppRole.venueAdmin || AppRole.doorStaff => const _LegacyRoleScreen(),
           _ => const UserHomeScreen(),
         };

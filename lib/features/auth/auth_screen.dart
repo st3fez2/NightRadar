@@ -1094,7 +1094,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       if (mounted) {
         final from = _currentRouteUri()?.queryParameters['from'];
         context.go(
-          from != null && from.isNotEmpty && from != '/auth' ? from : '/app',
+          from != null && from.isNotEmpty && from != '/auth'
+              ? from
+              : _defaultPostAuthTarget(),
         );
       }
     } catch (error) {
@@ -1253,6 +1255,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     } catch (_) {
       return null;
     }
+  }
+
+  String _defaultPostAuthTarget() {
+    return _isPromoterPane ? '/promoter' : '/app?area=user';
   }
 
   String _heroBadgeLabel() {
