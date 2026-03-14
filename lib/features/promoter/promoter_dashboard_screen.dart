@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_saver/file_saver.dart';
@@ -1537,6 +1538,7 @@ class PromoterDashboardScreen extends ConsumerWidget {
       text: data.promoterCard.tiktokHandle ?? '',
     );
     var isSaving = false;
+    var isUploading = false;
     String? errorText;
 
     await showDialog<void>(
@@ -1583,10 +1585,91 @@ class PromoterDashboardScreen extends ConsumerWidget {
                         controller: avatarController,
                         decoration: InputDecoration(
                           labelText: copy.text(
-                            it: 'URL foto profilo',
-                            en: 'Profile photo URL',
+                            it: 'URL foto o logo',
+                            en: 'Photo or logo URL',
                           ),
                         ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              copy.text(
+                                it: 'Puoi incollare un URL oppure caricare direttamente una foto o un logo.',
+                                en: 'You can paste a URL or upload a photo or logo directly.',
+                              ),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          OutlinedButton.icon(
+                            onPressed:
+                                isSaving ||
+                                    isUploading ||
+                                    AppFlavorConfig.isDemo
+                                ? null
+                                : () async {
+                                    final picked = await FilePicker.platform
+                                        .pickFiles(
+                                          type: FileType.image,
+                                          allowMultiple: false,
+                                          withData: true,
+                                        );
+                                    final file =
+                                        picked != null &&
+                                            picked.files.isNotEmpty
+                                        ? picked.files.first
+                                        : null;
+                                    if (file == null || file.bytes == null) {
+                                      return;
+                                    }
+
+                                    setState(() {
+                                      isUploading = true;
+                                      errorText = null;
+                                    });
+
+                                    try {
+                                      final imageUrl = await ref
+                                          .read(nightRadarRepositoryProvider)
+                                          .uploadPromoterCardImage(
+                                            bytes: file.bytes!,
+                                            fileName: file.name,
+                                          );
+                                      avatarController.text = imageUrl;
+                                    } catch (error) {
+                                      if (context.mounted) {
+                                        setState(() {
+                                          errorText = error.toString();
+                                        });
+                                      }
+                                    } finally {
+                                      if (context.mounted) {
+                                        setState(() {
+                                          isUploading = false;
+                                        });
+                                      }
+                                    }
+                                  },
+                            icon: Icon(
+                              isUploading
+                                  ? Icons.hourglass_top_rounded
+                                  : Icons.upload_file_rounded,
+                            ),
+                            label: Text(
+                              isUploading
+                                  ? copy.text(
+                                      it: 'Carico...',
+                                      en: 'Uploading...',
+                                    )
+                                  : copy.text(
+                                      it: 'Carica immagine',
+                                      en: 'Upload image',
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 12),
                       TextFormField(

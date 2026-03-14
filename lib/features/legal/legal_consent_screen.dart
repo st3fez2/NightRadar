@@ -63,8 +63,8 @@ class _LegalConsentScreenState extends ConsumerState<LegalConsentScreen> {
             en: 'We save consent on both the device and the profile, so user and promoter flows stay aligned.',
           )
         : copy.text(
-            it: 'La landing pubblica, l area utenti e gli strumenti PR si aprono solo dopo questa conferma.',
-            en: 'The public landing, user area, and promoter tools open only after this confirmation.',
+            it: 'Dopo questa conferma entri direttamente nell area user anonima, mentre accesso e registrazione restano richiesti solo quando servono davvero.',
+            en: 'After this confirmation you enter the anonymous user area directly, while sign-in and sign-up stay reserved for when they are actually needed.',
           );
 
     return Scaffold(
@@ -155,8 +155,8 @@ class _LegalConsentScreenState extends ConsumerState<LegalConsentScreen> {
                   icon: Icons.gpp_good_rounded,
                   title: copy.text(it: 'Perche lo chiediamo', en: 'Why we ask'),
                   description: copy.text(
-                    it: 'NightRadar gestisce liste, accessi, contatti, richieste ai PR ed export verso i locali. Prima di usare il servizio, chiarisce limiti del prodotto e uso dei dati.',
-                    en: 'NightRadar handles lists, entry flows, contacts, promoter requests, and exports to venues. Before you use the service, it clarifies product limits and data usage.',
+                    it: 'NightRadar gestisce liste, accessi, contatti, schede PR ed export verso i locali. Prima di usare il servizio, chiarisce limiti del prodotto e uso dei dati.',
+                    en: 'NightRadar handles lists, entry flows, contacts, promoter cards, and exports to venues. Before you use the service, it clarifies product limits and data usage.',
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -228,8 +228,8 @@ class _LegalConsentScreenState extends ConsumerState<LegalConsentScreen> {
                           contentPadding: EdgeInsets.zero,
                           title: Text(
                             copy.text(
-                              it: 'Ho letto l informativa privacy e compreso come NightRadar tratta i dati necessari a login, prenotazioni, richieste ai PR, liste, QR e preferenze locali.',
-                              en: 'I have read the privacy notice and understood how NightRadar processes the data needed for login, reservations, promoter requests, lists, QR passes, and local preferences.',
+                              it: 'Ho letto l informativa privacy e compreso come NightRadar tratta i dati necessari a login, prenotazioni, schede PR, liste, QR e preferenze locali.',
+                              en: 'I have read the privacy notice and understood how NightRadar processes the data needed for login, reservations, promoter cards, lists, QR passes, and local preferences.',
                             ),
                           ),
                         ),
@@ -362,11 +362,12 @@ class _LegalConsentScreenState extends ConsumerState<LegalConsentScreen> {
     if (fromPath != null &&
         fromPath.isNotEmpty &&
         fromPath != '/legal' &&
-        fromPath != '/auth') {
+        fromPath != '/auth' &&
+        fromPath != '/') {
       return fromPath;
     }
 
-    return signedIn ? '/app' : '/';
+    return '/app';
   }
 
   String _humanizeError(Object error) {

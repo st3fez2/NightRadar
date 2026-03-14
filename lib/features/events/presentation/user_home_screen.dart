@@ -28,9 +28,14 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final copy = context.copy;
+    final authUser = ref.watch(currentAuthUserProvider);
+    final hasSession = authUser != null;
+    final isVerifiedSession = authUser != null && !authUser.isAnonymous;
     final eventsAsync = ref.watch(eventFeedProvider);
-    final reservationsAsync = ref.watch(myReservationsProvider);
     final profileAsync = ref.watch(currentProfileProvider);
+    final reservationsAsync = hasSession
+        ? ref.watch(myReservationsProvider)
+        : const AsyncValue.data(<ReservationRecord>[]);
     final discovery = ref.watch(userDiscoveryPreferencesProvider);
     final eventLikes = ref.watch(eventLikePreferencesProvider);
 
@@ -38,7 +43,9 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
       appBar: AppBar(
         title: NightRadarLockup(
           label: 'NightRadar',
-          caption: copy.text(it: 'Area utente', en: 'User mode'),
+          caption: isVerifiedSession
+              ? copy.text(it: 'Area utente', en: 'User mode')
+              : copy.text(it: 'Esplora come guest', en: 'Explore as guest'),
           iconSize: 34,
         ),
         actions: [
@@ -46,18 +53,21 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
             padding: EdgeInsets.only(right: 8),
             child: Center(child: LanguageToggle(compact: true)),
           ),
-          IconButton(
-            onPressed: () async {
-              await ref.read(nightRadarRepositoryProvider).signOut();
-            },
-            icon: const Icon(Icons.logout_rounded),
-          ),
+          if (hasSession)
+            IconButton(
+              onPressed: () async {
+                await ref.read(nightRadarRepositoryProvider).signOut();
+              },
+              icon: const Icon(Icons.logout_rounded),
+            ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(eventFeedProvider);
-          ref.invalidate(myReservationsProvider);
+          if (hasSession) {
+            ref.invalidate(myReservationsProvider);
+          }
           await ref.read(eventFeedProvider.future);
         },
         child: ResponsivePage(
@@ -65,22 +75,18 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
               NightRadarHero(
-                title: profileAsync.value == null
+                title: !isVerifiedSession || profileAsync.value == null
                     ? copy.text(
                         it: 'Sei in due? Parti da stasera',
                         en: 'Going out as two? Start with tonight',
                       )
                     : copy.text(
-                        it:
-                            'Ciao ${profileAsync.value!.fullName.split(' ').first}',
-                        en:
-                            'Hi ${profileAsync.value!.fullName.split(' ').first}',
+                        it: 'Ciao ${profileAsync.value!.fullName.split(' ').first}',
+                        en: 'Hi ${profileAsync.value!.fullName.split(' ').first}',
                       ),
                 subtitle: copy.text(
-                  it:
-                      'Filtra per stasera o domani, resta dentro il tuo tempo auto stimato e tieni a portata i PR di cui ti fidi.',
-                  en:
-                      'Filter for tonight or tomorrow, stay within your estimated drive time, and keep trusted promoters close.',
+                  it: 'Filtra per stasera o domani, resta dentro il tuo tempo auto stimato e tieni a portata i PR di cui ti fidi.',
+                  en: 'Filter for tonight or tomorrow, stay within your estimated drive time, and keep trusted promoters close.',
                 ),
                 trailing: const RadarChip(label: 'active'),
               ),
@@ -91,12 +97,17 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                   en: 'Share NightRadar with your group',
                 ),
                 subtitle: copy.text(
-                  it:
-                      'La home utente tiene sempre visibile QR e link pubblico, cosi puoi girarli al volo ad amici e nuovi invitati.',
-                  en:
-                      'The user home keeps QR and public link visible, so you can forward them quickly to friends and new guests.',
+                  it: 'La home utente tiene sempre visibile QR e link pubblico, cosi puoi girarli al volo ad amici e nuovi invitati.',
+                  en: 'The user home keeps QR and public link visible, so you can forward them quickly to friends and new guests.',
                 ),
               ),
+              if (!isVerifiedSession) ...[
+                const SizedBox(height: 12),
+                _AnonymousAccessCard(
+                  onOpenUserAccess: () =>
+                      context.push('/auth?mode=user-signin'),
+                ),
+              ],
               if (AppFlavorConfig.isDemo) ...[
                 const SizedBox(height: 12),
                 const FlavorNoticeCard(compact: true),
@@ -105,13 +116,18 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
               eventsAsync.when(
                 data: (events) {
                   final profile = profileAsync.valueOrNull;
+                  final discoverableEvents = events
+                      .where((event) => !event.isClosed)
+                      .toList();
+                  final feedEvents = discoverableEvents.isEmpty
+                      ? events
+                      : discoverableEvents;
                   final tags = {
-                    for (final event in events) ...event.musicTags,
-                  }.toList()
-                    ..sort();
+                    for (final event in feedEvents) ...event.musicTags,
+                  }.toList()..sort();
                   final cityOptions = _buildCityOptions(
                     profile: profile,
-                    events: events,
+                    events: feedEvents,
                     selectedOriginCity: discovery.originCity,
                   );
                   final effectiveOriginCity = _effectiveOriginCity(
@@ -119,16 +135,24 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                     discovery: discovery,
                     cityOptions: cityOptions,
                   );
+                  final demoArchiveEvents = AppFlavorConfig.isDemo
+                      ? _buildDemoArchiveEvents(
+                          events,
+                          discovery: discovery,
+                          originCity: effectiveOriginCity,
+                        )
+                      : const <EventSummary>[];
                   final visibleEvents = _filterAndSortEvents(
-                    events,
+                    feedEvents,
                     discovery: discovery,
                     originCity: effectiveOriginCity,
                   );
                   final suggestedEvent = _pickSuggestedEvent(visibleEvents);
                   final trustedPromoterEvents = visibleEvents
                       .where(
-                        (event) =>
-                            discovery.isTrustedPromoter(event.primaryPromoterId),
+                        (event) => discovery.isTrustedPromoter(
+                          event.primaryPromoterId,
+                        ),
                       )
                       .take(3)
                       .toList();
@@ -141,8 +165,8 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                         maxDriveMinutes: discovery.maxDriveMinutes,
                         originCity: effectiveOriginCity,
                         cityOptions: cityOptions,
-                        trustedPromoterNames:
-                            discovery.trustedPromoters.values.toList(),
+                        trustedPromoterNames: discovery.trustedPromoters.values
+                            .toList(),
                         onTimePlanChanged: (plan) {
                           ref
                               .read(userDiscoveryPreferencesProvider.notifier)
@@ -171,7 +195,8 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                             suggestedEvent.primaryPromoterId,
                           ),
                           isLiked: eventLikes.hasLiked(suggestedEvent.id),
-                          onOpen: () => context.push('/event/${suggestedEvent.id}'),
+                          onOpen: () =>
+                              context.push('/event/${suggestedEvent.id}'),
                           onToggleLike: () => _toggleEventLike(
                             context,
                             event: suggestedEvent,
@@ -220,13 +245,15 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                             _FilterChip(
                               label: copy.text(it: 'Tutto', en: 'All'),
                               selected: _selectedFilter == 'all',
-                              onTap: () => setState(() => _selectedFilter = 'all'),
+                              onTap: () =>
+                                  setState(() => _selectedFilter = 'all'),
                             ),
                             for (final tag in tags)
                               _FilterChip(
                                 label: tag,
                                 selected: _selectedFilter == tag,
-                                onTap: () => setState(() => _selectedFilter = tag),
+                                onTap: () =>
+                                    setState(() => _selectedFilter = tag),
                               ),
                           ],
                         ),
@@ -248,9 +275,15 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                           ),
                           message: copy.text(
                             it:
-                                'Prova ad allargare il tempo auto, cambiare giorno oppure togliere il filtro musicale.',
+                                AppFlavorConfig.isDemo &&
+                                    demoArchiveEvents.isNotEmpty
+                                ? 'Non ci sono serate attive per questo filtro, ma piu sotto puoi esplorare l archivio demo.'
+                                : 'Prova ad allargare il tempo auto, cambiare giorno oppure togliere il filtro musicale.',
                             en:
-                                'Try extending the drive time, changing the day, or clearing the music filter.',
+                                AppFlavorConfig.isDemo &&
+                                    demoArchiveEvents.isNotEmpty
+                                ? 'There are no active nights for this filter, but you can explore the demo archive further below.'
+                                : 'Try extending the drive time, changing the day, or clearing the music filter.',
                           ),
                         )
                       else
@@ -263,10 +296,9 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                                 originCity: effectiveOriginCity,
                                 destinationCity: event.city,
                               ),
-                              isTrustedPromoter:
-                                  discovery.isTrustedPromoter(
-                                    event.primaryPromoterId,
-                                  ),
+                              isTrustedPromoter: discovery.isTrustedPromoter(
+                                event.primaryPromoterId,
+                              ),
                               isLiked: eventLikes.hasLiked(event.id),
                               onTap: () => context.push('/event/${event.id}'),
                               onToggleLike: () => _toggleEventLike(
@@ -277,6 +309,46 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                             ),
                           ),
                         ),
+                      if (demoArchiveEvents.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Text(
+                          copy.text(
+                            it: 'Archivio demo esplorabile',
+                            en: 'Browsable demo archive',
+                          ),
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          copy.text(
+                            it: 'Queste serate sono chiuse o passate, quindi non toccano la prod ma restano utili per mostrare card, PR e dettaglio evento in demo.',
+                            en: 'These nights are closed or in the past, so they do not affect prod but remain useful to showcase cards, promoters, and event detail in demo.',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...demoArchiveEvents.map(
+                          (event) => Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: _EventCard(
+                              event: event,
+                              driveEstimate: estimateDriveTime(
+                                originCity: effectiveOriginCity,
+                                destinationCity: event.city,
+                              ),
+                              isTrustedPromoter: discovery.isTrustedPromoter(
+                                event.primaryPromoterId,
+                              ),
+                              isLiked: eventLikes.hasLiked(event.id),
+                              onTap: () => context.push('/event/${event.id}'),
+                              onToggleLike: () => _toggleEventLike(
+                                context,
+                                event: event,
+                                currentlyLiked: eventLikes.hasLiked(event.id),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   );
                 },
@@ -294,7 +366,12 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
               ),
               const SizedBox(height: 18),
               Text(
-                copy.text(it: 'I miei pass', en: 'My passes'),
+                hasSession
+                    ? copy.text(it: 'I miei pass', en: 'My passes')
+                    : copy.text(
+                        it: 'Pass pronti quando ti servono',
+                        en: 'Passes ready when you need them',
+                      ),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
@@ -303,14 +380,20 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                   if (reservations.isEmpty) {
                     return EmptyStateCard(
                       title: copy.text(
-                        it: 'Ancora nessun pass',
-                        en: 'No passes yet',
+                        it: hasSession
+                            ? 'Ancora nessun pass'
+                            : 'Esplora e poi entra solo quando serve',
+                        en: hasSession
+                            ? 'No passes yet'
+                            : 'Explore first and sign in only when needed',
                       ),
                       message: copy.text(
-                        it:
-                            'Quando prenoti una serata, il tuo QR apparira qui.',
-                        en:
-                            'When you reserve an event, your QR will appear here.',
+                        it: hasSession
+                            ? 'Quando prenoti una serata, il tuo QR apparira qui.'
+                            : 'Puoi vedere eventi e PR senza account. Quando decidi di partecipare a una serata ti chiediamo accesso o conferma guest nel punto giusto.',
+                        en: hasSession
+                            ? 'When you reserve an event, your QR will appear here.'
+                            : 'You can browse events and promoters without an account. When you decide to join a night, we ask for access or guest confirmation at the right moment.',
                       ),
                     );
                   }
@@ -351,6 +434,17 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 20),
+              _PromoterEntryCard(
+                onSignIn: () => context.push(
+                  '/auth?mode=promoter-signin&from=${Uri.encodeComponent('/promoter')}',
+                ),
+                onSignUp: AppFlavorConfig.isDemo
+                    ? null
+                    : () => context.push(
+                        '/auth?mode=promoter-signup&from=${Uri.encodeComponent('/promoter')}',
+                      ),
+              ),
             ],
           ),
         ),
@@ -367,7 +461,9 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
     final likePreferences = ref.read(eventLikePreferencesProvider);
 
     try {
-      await ref.read(nightRadarRepositoryProvider).toggleEventLike(
+      await ref
+          .read(nightRadarRepositoryProvider)
+          .toggleEventLike(
             eventId: event.id,
             viewerToken: likePreferences.viewerToken,
           );
@@ -418,8 +514,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
         selectedOriginCity!.trim(),
       for (final event in events)
         if (event.city.trim().isNotEmpty) event.city.trim(),
-    }.toList()
-      ..sort();
+    }.toList()..sort();
     return options;
   }
 
@@ -466,19 +561,45 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
     }).toList();
 
     filtered.sort(
-      (left, right) => _scoreEvent(
-        right,
-        discovery: discovery,
-        originCity: originCity,
-      ).compareTo(
-        _scoreEvent(
-          left,
-          discovery: discovery,
-          originCity: originCity,
-        ),
-      ),
+      (left, right) =>
+          _scoreEvent(
+            right,
+            discovery: discovery,
+            originCity: originCity,
+          ).compareTo(
+            _scoreEvent(left, discovery: discovery, originCity: originCity),
+          ),
     );
     return filtered;
+  }
+
+  List<EventSummary> _buildDemoArchiveEvents(
+    List<EventSummary> events, {
+    required UserDiscoveryPreferences discovery,
+    required String? originCity,
+  }) {
+    final archived = events.where((event) {
+      if (!event.isClosed) {
+        return false;
+      }
+      if (_selectedFilter != 'all' &&
+          !event.musicTags.contains(_selectedFilter)) {
+        return false;
+      }
+      final driveEstimate = estimateDriveTime(
+        originCity: originCity,
+        destinationCity: event.city,
+      );
+      if (discovery.maxDriveMinutes != null &&
+          driveEstimate != null &&
+          driveEstimate.minutes > discovery.maxDriveMinutes!) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    archived.sort((left, right) => right.startsAt.compareTo(left.startsAt));
+    return archived;
   }
 
   EventSummary? _pickSuggestedEvent(List<EventSummary> events) {
@@ -500,9 +621,10 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
     return switch (plan) {
       UserEventTimePlan.tonight =>
         startsAt.isAfter(now.subtract(const Duration(hours: 2))) &&
-        startsAt.isBefore(startOfTomorrow),
+            startsAt.isBefore(startOfTomorrow),
       UserEventTimePlan.tomorrow =>
-        !startsAt.isBefore(startOfTomorrow) && startsAt.isBefore(startOfDayAfter),
+        !startsAt.isBefore(startOfTomorrow) &&
+            startsAt.isBefore(startOfDayAfter),
       UserEventTimePlan.flexible => !startsAt.isBefore(startOfToday),
     };
   }
@@ -533,6 +655,110 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
         priceBonus +
         offerBonus +
         likeBonus;
+  }
+}
+
+class _AnonymousAccessCard extends StatelessWidget {
+  const _AnonymousAccessCard({required this.onOpenUserAccess});
+
+  final VoidCallback onOpenUserAccess;
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = context.copy;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              copy.text(
+                it: 'Ingresso leggero: prima esplori, poi decidi',
+                en: 'Light entry: explore first, decide later',
+              ),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              copy.text(
+                it: 'Qui puoi vedere eventi e PR senza autenticarti. Ti chiediamo accesso solo quando vuoi davvero partecipare a una serata.',
+                en: 'Here you can browse events and promoters without signing in. We ask for access only when you actually want to join a night.',
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onOpenUserAccess,
+              icon: const Icon(Icons.login_rounded),
+              label: Text(
+                copy.text(
+                  it: 'Hai gia un account user?',
+                  en: 'Already have a user account?',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PromoterEntryCard extends StatelessWidget {
+  const _PromoterEntryCard({required this.onSignIn, this.onSignUp});
+
+  final VoidCallback onSignIn;
+  final VoidCallback? onSignUp;
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = context.copy;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              copy.text(it: 'Entri come PR?', en: 'Coming in as a promoter?'),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              copy.text(
+                it: 'L accesso PR resta in fondo, separato dal percorso user: entri nella dashboard promoter oppure crei direttamente il tuo account PR.',
+                en: 'Promoter access stays at the bottom, separate from the user flow: enter the promoter dashboard or create your promoter account directly.',
+              ),
+            ),
+            const SizedBox(height: 14),
+            ResponsiveActionRow(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onSignIn,
+                  icon: const Icon(Icons.campaign_outlined),
+                  label: Text(
+                    copy.text(it: 'Accedi come PR', en: 'Sign in as promoter'),
+                  ),
+                ),
+                if (onSignUp != null)
+                  ElevatedButton.icon(
+                    onPressed: onSignUp,
+                    icon: const Icon(Icons.person_add_alt_1_rounded),
+                    label: Text(
+                      copy.text(
+                        it: 'Registrati come PR',
+                        en: 'Sign up as promoter',
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -578,10 +804,8 @@ class _DiscoveryPlannerCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               copy.text(
-                it:
-                    'Scegli se stai guardando stasera o domani, imposta la partenza e taglia il feed entro un tempo auto stimato.',
-                en:
-                    'Choose whether you are looking at tonight or tomorrow, set your starting city, and trim the feed by estimated drive time.',
+                it: 'Scegli se stai guardando stasera o domani, imposta la partenza e taglia il feed entro un tempo auto stimato.',
+                en: 'Choose whether you are looking at tonight or tomorrow, set your starting city, and trim the feed by estimated drive time.',
               ),
             ),
             const SizedBox(height: 14),
@@ -622,10 +846,7 @@ class _DiscoveryPlannerCard extends StatelessWidget {
                     child: Text(copy.text(it: 'Scelta automatica', en: 'Auto')),
                   ),
                   for (final city in cityOptions)
-                    DropdownMenuItem<String?>(
-                      value: city,
-                      child: Text(city),
-                    ),
+                    DropdownMenuItem<String?>(value: city, child: Text(city)),
                 ],
                 onChanged: onOriginCityChanged,
               ),
@@ -638,18 +859,12 @@ class _DiscoveryPlannerCard extends StatelessWidget {
             compact
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: _driveOptions(
-                      context,
-                      selected: maxDriveMinutes,
-                    ),
+                    children: _driveOptions(context, selected: maxDriveMinutes),
                   )
                 : Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _driveOptions(
-                      context,
-                      selected: maxDriveMinutes,
-                    ),
+                    children: _driveOptions(context, selected: maxDriveMinutes),
                   ),
             if (trustedPromoterNames.isNotEmpty) ...[
               const SizedBox(height: 14),
@@ -677,10 +892,7 @@ class _DiscoveryPlannerCard extends StatelessWidget {
     );
   }
 
-  List<Widget> _driveOptions(
-    BuildContext context, {
-    required int? selected,
-  }) {
+  List<Widget> _driveOptions(BuildContext context, {required int? selected}) {
     final copy = context.copy;
     return [
       _PlannerChip(
@@ -755,20 +967,14 @@ class _SuggestionSpotlight extends StatelessWidget {
               Chip(
                 avatar: const Icon(Icons.auto_awesome_rounded, size: 16),
                 label: Text(
-                  copy.text(
-                    it: 'Suggerimento rapido',
-                    en: 'Quick suggestion',
-                  ),
+                  copy.text(it: 'Suggerimento rapido', en: 'Quick suggestion'),
                 ),
               ),
               RadarChip(label: event.radarLabel),
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            event.title,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          Text(event.title, style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
           Text('${event.venueName}  ${event.city}'),
           const SizedBox(height: 8),
@@ -781,17 +987,17 @@ class _SuggestionSpotlight extends StatelessWidget {
                   avatar: const Icon(Icons.directions_car_outlined, size: 16),
                   label: Text(
                     copy.text(
-                      it:
-                          'Auto ~${driveEstimate!.minutes} min da ${driveEstimate!.originCity}',
-                      en:
-                          'Drive ~${driveEstimate!.minutes} min from ${driveEstimate!.originCity}',
+                      it: 'Auto ~${driveEstimate!.minutes} min da ${driveEstimate!.originCity}',
+                      en: 'Drive ~${driveEstimate!.minutes} min from ${driveEstimate!.originCity}',
                     ),
                   ),
                 ),
               if (event.primaryPromoterName?.trim().isNotEmpty == true)
                 Chip(
                   avatar: Icon(
-                    isTrusted ? Icons.star_rounded : Icons.person_outline_rounded,
+                    isTrusted
+                        ? Icons.star_rounded
+                        : Icons.person_outline_rounded,
                     size: 16,
                   ),
                   label: Text(
@@ -805,7 +1011,9 @@ class _SuggestionSpotlight extends StatelessWidget {
                 ),
               Chip(
                 avatar: Icon(
-                  isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  isLiked
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
                   size: 16,
                 ),
                 label: Text('${event.likeCount}'),
@@ -817,9 +1025,7 @@ class _SuggestionSpotlight extends StatelessWidget {
             children: [
               ElevatedButton(
                 onPressed: onOpen,
-                child: Text(
-                  copy.text(it: 'Apri evento', en: 'Open event'),
-                ),
+                child: Text(copy.text(it: 'Apri evento', en: 'Open event')),
               ),
               OutlinedButton.icon(
                 onPressed: onToggleLike,
@@ -980,7 +1186,10 @@ class _EventCard extends StatelessWidget {
                     children: [
                       if (driveEstimate != null)
                         Chip(
-                          avatar: const Icon(Icons.directions_car_outlined, size: 16),
+                          avatar: const Icon(
+                            Icons.directions_car_outlined,
+                            size: 16,
+                          ),
                           label: Text(
                             copy.text(
                               it: 'Auto ~${driveEstimate!.minutes} min',
@@ -1017,6 +1226,11 @@ class _EventCard extends StatelessWidget {
                       if (event.minimumAge != null)
                         Chip(
                           label: Text(copy.minimumAgeLabel(event.minimumAge)),
+                        ),
+                      if (event.isClosed)
+                        Chip(
+                          avatar: const Icon(Icons.history_rounded, size: 16),
+                          label: Text(copy.text(it: 'Archivio', en: 'Archive')),
                         ),
                       for (final tag in event.musicTags.take(3))
                         Chip(label: Text(tag)),

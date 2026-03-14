@@ -16,6 +16,14 @@ final authStateChangesProvider = StreamProvider<AuthState>((ref) {
   return ref.watch(supabaseClientProvider).auth.onAuthStateChange;
 });
 
+final currentAuthUserProvider = Provider<User?>((ref) {
+  try {
+    return ref.watch(supabaseClientProvider).auth.currentUser;
+  } catch (_) {
+    return null;
+  }
+});
+
 final currentProfileProvider = FutureProvider<AppProfile?>((ref) async {
   ref.watch(authStateChangesProvider);
   return ref.watch(nightRadarRepositoryProvider).getCurrentProfile();
@@ -25,26 +33,32 @@ final eventFeedProvider = FutureProvider<List<EventSummary>>((ref) async {
   return ref.watch(nightRadarRepositoryProvider).fetchEventFeed();
 });
 
-final eventDetailsProvider =
-    FutureProvider.family<EventDetails, String>((ref, eventId) async {
+final eventDetailsProvider = FutureProvider.family<EventDetails, String>((
+  ref,
+  eventId,
+) async {
   return ref.watch(nightRadarRepositoryProvider).fetchEventDetails(eventId);
 });
 
-final myReservationsProvider =
-    FutureProvider<List<ReservationRecord>>((ref) async {
+final myReservationsProvider = FutureProvider<List<ReservationRecord>>((
+  ref,
+) async {
   ref.watch(authStateChangesProvider);
   return ref.watch(nightRadarRepositoryProvider).fetchMyReservations();
 });
 
-final reservationProvider =
-    FutureProvider.family<ReservationRecord, String>((ref, reservationId) async {
-  return ref.watch(nightRadarRepositoryProvider).fetchReservationById(
-        reservationId,
-      );
+final reservationProvider = FutureProvider.family<ReservationRecord, String>((
+  ref,
+  reservationId,
+) async {
+  return ref
+      .watch(nightRadarRepositoryProvider)
+      .fetchReservationById(reservationId);
 });
 
-final promoterDashboardProvider =
-    FutureProvider<PromoterDashboardData>((ref) async {
+final promoterDashboardProvider = FutureProvider<PromoterDashboardData>((
+  ref,
+) async {
   ref.watch(authStateChangesProvider);
   return ref.watch(nightRadarRepositoryProvider).fetchPromoterDashboard();
 });

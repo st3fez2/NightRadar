@@ -9,14 +9,14 @@ import '../../core/widgets/brand_lockup.dart';
 import '../../core/widgets/flavor_notice_card.dart';
 import '../../core/widgets/language_toggle.dart';
 import '../../core/widgets/public_link_card.dart';
+import '../../shared/models.dart';
 
 enum _AuthPane {
   userSignIn,
   userSignUp,
   emailPending,
-  promoterAccess,
-  promoterRequest,
-  promoterRequestSent,
+  promoterSignIn,
+  promoterSignUp,
 }
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -28,37 +28,65 @@ class AuthScreen extends ConsumerStatefulWidget {
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _authFormKey = GlobalKey<FormState>();
-  final _promoterRequestFormKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _requestCityController = TextEditingController();
-  final _requestPhoneController = TextEditingController();
-  final _requestInstagramController = TextEditingController();
-  final _requestNoteController = TextEditingController();
 
   _AuthPane _pane = _AuthPane.userSignIn;
+  String? _lastRouteMode;
   bool _isSubmitting = false;
   bool _isResendingEmail = false;
   String? _errorText;
   String? _pendingEmail;
+  bool _pendingPromoterSignUp = false;
 
+  bool get _isUserSignIn => _pane == _AuthPane.userSignIn;
   bool get _isUserSignUp => _pane == _AuthPane.userSignUp;
+  bool get _isPromoterSignUp => _pane == _AuthPane.promoterSignUp;
   bool get _isPromoterPane =>
-      _pane == _AuthPane.promoterAccess ||
-      _pane == _AuthPane.promoterRequest ||
-      _pane == _AuthPane.promoterRequestSent;
+      _pane == _AuthPane.promoterSignIn || _pane == _AuthPane.promoterSignUp;
 
   @override
   void dispose() {
     _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _requestCityController.dispose();
-    _requestPhoneController.dispose();
-    _requestInstagramController.dispose();
-    _requestNoteController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final uri = _currentRouteUri();
+    if (uri == null) {
+      return;
+    }
+    final routeMode =
+        '${uri.queryParameters['mode']}|${uri.queryParameters['from']}';
+    if (_lastRouteMode == routeMode) {
+      return;
+    }
+    _lastRouteMode = routeMode;
+
+    final requestedPane = _paneFromUri(uri);
+    final resolvedPane = AppFlavorConfig.isDemo
+        ? switch (requestedPane) {
+            _AuthPane.userSignUp => _AuthPane.userSignIn,
+            _AuthPane.promoterSignUp => _AuthPane.promoterSignIn,
+            _ => requestedPane,
+          }
+        : requestedPane;
+    if (resolvedPane == null || resolvedPane == _pane) {
+      return;
+    }
+
+    setState(() {
+      _pane = resolvedPane;
+      _errorText = null;
+      if (resolvedPane != _AuthPane.emailPending) {
+        _pendingPromoterSignUp = false;
+      }
+    });
   }
 
   @override
@@ -226,15 +254,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: switch (_pane) {
-                      _AuthPane.promoterAccess => _buildPromoterAccessCard(
+                      _AuthPane.promoterSignIn => _buildPromoterSignInCard(
                         context,
                       ),
                       _AuthPane.emailPending => _buildEmailPendingCard(context),
-                      _AuthPane.promoterRequest => _buildPromoterRequestForm(
+                      _AuthPane.promoterSignUp => _buildPromoterSignUpForm(
                         context,
                       ),
-                      _AuthPane.promoterRequestSent =>
-                        _buildPromoterRequestSentCard(context),
                       _ => _buildUserAuthForm(context),
                     },
                   ),
@@ -288,6 +314,31 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ],
             ),
           ),
+          if (!AppFlavorConfig.isDemo && _isUserSignIn) ...[
+            const SizedBox(height: 18),
+            _buildGoogleAccessCard(
+              context,
+              title: copy.text(
+                it: 'Continua con Google come user',
+                en: 'Continue with Google as user',
+              ),
+              subtitle: copy.text(
+                it: 'Se vuoi entrare piu velocemente per prenotare e salvare i tuoi pass, puoi usare Google e tornare subito all evento che stavi aprendo.',
+                en: 'If you want a faster way to book and save your passes, you can use Google and go straight back to the event you were opening.',
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(child: Divider(color: theme.dividerColor)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Text(copy.text(it: 'oppure', en: 'or')),
+                ),
+                Expanded(child: Divider(color: theme.dividerColor)),
+              ],
+            ),
+          ],
           const SizedBox(height: 18),
           if (_isUserSignUp) ...[
             TextFormField(
@@ -360,8 +411,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     en: 'After sign-up, if the project requires email confirmation, you stay guided here until verification.',
                   )
                 : copy.text(
-                    it: 'Se invece devi lavorare come PR, apri il percorso PR qui sopra per entrare direttamente nell area promoter o richiedere l attivazione.',
-                    en: 'If you need promoter access instead, switch to the promoter path above to enter the promoter area directly or request activation.',
+                    it: 'Se invece devi lavorare come PR, apri il percorso PR qui sopra per accedere o registrarti direttamente come promoter.',
+                    en: 'If you need promoter access instead, switch to the promoter path above to sign in or sign up directly as a promoter.',
                   ),
             style: theme.textTheme.bodySmall,
           ),
@@ -419,7 +470,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
-  Widget _buildPromoterAccessCard(BuildContext context) {
+  Widget _buildPromoterSignInCard(BuildContext context) {
     final copy = context.copy;
     final theme = Theme.of(context);
 
@@ -451,8 +502,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 const SizedBox(height: 8),
                 Text(
                   copy.text(
-                    it: 'Se il tuo account PR e gia attivo, entri subito nell area promoter. Se non e ancora attivo, puoi inviare la richiesta dedicata qui accanto.',
-                    en: 'If your promoter account is already active, you enter the promoter area immediately. If it is not active yet, you can send the dedicated request here.',
+                    it: 'Se hai gia un account PR, accedi e NightRadar ti porta subito nella dashboard promoter. Se devi ancora crearlo, usa la registrazione PR qui sopra.',
+                    en: 'If you already have a promoter account, sign in and NightRadar takes you straight to the promoter dashboard. If you still need to create it, use the promoter sign-up above.',
                   ),
                 ),
               ],
@@ -467,8 +518,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 en: 'Continue with Google as promoter',
               ),
               subtitle: copy.text(
-                it: 'Appena il canale PR e approvato, NightRadar ti autentica e ti porta direttamente nell area promoter.',
-                en: 'As soon as the promoter channel is approved, NightRadar authenticates you and brings you straight into the promoter area.',
+                it: 'Se il tuo account PR e gia registrato, Google ti autentica e ti porta direttamente nell area promoter.',
+                en: 'If your promoter account is already registered, Google authenticates you and takes you straight into the promoter area.',
               ),
             ),
             const SizedBox(height: 18),
@@ -623,10 +674,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         ),
         const SizedBox(height: 10),
         Text(
-          copy.text(
-            it: 'Abbiamo preparato il tuo account, ma per entrare dobbiamo prima confermare l indirizzo email.',
-            en: 'We prepared your account, but before signing in we need to confirm your email address.',
-          ),
+          _pendingPromoterSignUp
+              ? copy.text(
+                  it: 'Abbiamo preparato il tuo account PR, ma per entrare dobbiamo prima confermare l indirizzo email.',
+                  en: 'We prepared your promoter account, but before signing in we need to confirm your email address.',
+                )
+              : copy.text(
+                  it: 'Abbiamo preparato il tuo account, ma per entrare dobbiamo prima confermare l indirizzo email.',
+                  en: 'We prepared your account, but before signing in we need to confirm your email address.',
+                ),
           style: theme.textTheme.bodyLarge,
         ),
         const SizedBox(height: 12),
@@ -668,7 +724,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ? null
               : () {
                   setState(() {
-                    _pane = _AuthPane.userSignIn;
+                    _pane = _pendingPromoterSignUp
+                        ? _AuthPane.promoterSignIn
+                        : _AuthPane.userSignIn;
                     _errorText = null;
                   });
                 },
@@ -686,7 +744,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ? null
               : () {
                   setState(() {
-                    _pane = _AuthPane.userSignUp;
+                    _pane = _pendingPromoterSignUp
+                        ? _AuthPane.promoterSignUp
+                        : _AuthPane.userSignUp;
                     _errorText = null;
                   });
                 },
@@ -698,29 +758,43 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
-  Widget _buildPromoterRequestForm(BuildContext context) {
+  Widget _buildPromoterSignUpForm(BuildContext context) {
     final copy = context.copy;
     final theme = Theme.of(context);
 
     return Form(
-      key: _promoterRequestFormKey,
+      key: _authFormKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildPromoterModeChips(),
           const SizedBox(height: 18),
-          Text(
-            copy.text(
-              it: 'Richiesta account PR',
-              en: 'Promoter account request',
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7F1EA),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE0D2C4)),
             ),
-            style: theme.textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            copy.text(
-              it: 'Mandaci i tuoi dati e apriamo il canale PR senza confondere il flusso utente normale.',
-              en: 'Send us your details and we will open the promoter channel without confusing the normal user flow.',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  copy.text(
+                    it: 'Registrazione PR automatica',
+                    en: 'Automatic promoter sign-up',
+                  ),
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  copy.text(
+                    it: 'Crea direttamente il tuo account PR. Dopo l accesso potrai completare la scheda con bio, foto o logo, Instagram e TikTok.',
+                    en: 'Create your promoter account directly. After sign-in you can complete the card with bio, photo or logo, Instagram, and TikTok.',
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -758,39 +832,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           ),
           const SizedBox(height: 12),
           TextFormField(
-            controller: _requestCityController,
+            controller: _passwordController,
             decoration: InputDecoration(
-              labelText: copy.text(it: 'Citta', en: 'City'),
+              labelText: copy.text(it: 'Password', en: 'Password'),
             ),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _requestPhoneController,
-            decoration: InputDecoration(
-              labelText: copy.text(it: 'Telefono', en: 'Phone'),
-            ),
-            keyboardType: TextInputType.phone,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _requestInstagramController,
-            decoration: InputDecoration(
-              labelText: copy.text(
-                it: 'Instagram o riferimento social',
-                en: 'Instagram or social reference',
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _requestNoteController,
-            decoration: InputDecoration(
-              labelText: copy.text(
-                it: 'Esperienza, locali o note utili',
-                en: 'Experience, venues, or useful notes',
-              ),
-            ),
-            maxLines: 4,
+            obscureText: true,
+            validator: (value) {
+              if (value == null || value.length < 6) {
+                return copy.text(
+                  it: 'Minimo 6 caratteri',
+                  en: 'Minimum 6 characters',
+                );
+              }
+              return null;
+            },
           ),
           if (_errorText != null) ...[
             const SizedBox(height: 12),
@@ -803,82 +858,27 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             ),
           ],
           const SizedBox(height: 18),
-          ElevatedButton.icon(
-            onPressed: _isSubmitting ? null : _submitPromoterRequest,
-            icon: const Icon(Icons.campaign_rounded),
-            label: Text(
+          ElevatedButton(
+            onPressed: _isSubmitting ? null : _submitAuthForm,
+            child: Text(
               _isSubmitting
-                  ? copy.text(it: 'Invio...', en: 'Sending...')
+                  ? copy.text(it: 'Attendi...', en: 'Please wait...')
                   : copy.text(
-                      it: 'Invia richiesta PR',
-                      en: 'Send promoter request',
+                      it: 'Registrati come PR',
+                      en: 'Sign up as promoter',
                     ),
             ),
           ),
+          const SizedBox(height: 10),
+          Text(
+            copy.text(
+              it: 'La registrazione PR crea subito il profilo promoter. Da dashboard potrai poi personalizzare la tua scheda pubblica con foto o logo.',
+              en: 'Promoter sign-up creates the promoter profile immediately. From the dashboard you can then customize the public card with a photo or logo.',
+            ),
+            style: theme.textTheme.bodySmall,
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPromoterRequestSentCard(BuildContext context) {
-    final copy = context.copy;
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          copy.text(it: 'Richiesta PR inviata', en: 'Promoter request sent'),
-          style: theme.textTheme.titleLarge,
-        ),
-        const SizedBox(height: 10),
-        Text(
-          copy.text(
-            it: 'Abbiamo salvato la tua richiesta PR. Ti contatteremo usando i dati che hai lasciato, senza interrompere il flusso utenti standard.',
-            en: 'We saved your promoter request. We will contact you using the details you left, without interrupting the standard user flow.',
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF2ECE5),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Text(
-            _pendingEmail ?? _emailController.text.trim(),
-            style: theme.textTheme.titleMedium,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: () {
-            setState(() {
-              _pane = _AuthPane.promoterAccess;
-              _errorText = null;
-            });
-          },
-          child: Text(
-            copy.text(it: 'Vai all accesso PR', en: 'Go to promoter access'),
-          ),
-        ),
-        const SizedBox(height: 10),
-        TextButton(
-          onPressed: () {
-            setState(() {
-              _pane = _AuthPane.promoterRequest;
-              _errorText = null;
-            });
-          },
-          child: Text(
-            copy.text(
-              it: 'Modifica o invia un altra richiesta',
-              en: 'Edit or send another request',
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -904,11 +904,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             icon: Icons.campaign_rounded,
             title: 'Sono un PR',
             subtitle: copy.text(
-              it: 'Entro direttamente nell area promoter oppure richiedo attivazione.',
-              en: 'I enter the promoter area directly or request activation.',
+              it: 'Accedo o mi registro come promoter e poi personalizzo la mia scheda PR.',
+              en: 'I sign in or sign up as a promoter and then customize my promoter card.',
             ),
             selected: _isPromoterPane,
-            onTap: () => _setPane(_AuthPane.promoterAccess),
+            onTap: () => _setPane(_AuthPane.promoterSignIn),
           ),
         ),
       ],
@@ -946,31 +946,51 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       children: [
         ChoiceChip(
           label: Text(copy.text(it: 'Accesso PR', en: 'Promoter access')),
-          selected: _pane == _AuthPane.promoterAccess,
-          onSelected: (_) => _setPane(_AuthPane.promoterAccess),
+          selected: _pane == _AuthPane.promoterSignIn,
+          onSelected: (_) => _setPane(_AuthPane.promoterSignIn),
         ),
-        ChoiceChip(
-          label: Text(
-            copy.text(
-              it: 'Richiedi attivazione PR',
-              en: 'Request promoter activation',
+        if (!AppFlavorConfig.isDemo)
+          ChoiceChip(
+            label: Text(
+              copy.text(it: 'Registrazione PR', en: 'Promoter sign-up'),
             ),
+            selected: _pane == _AuthPane.promoterSignUp,
+            onSelected: (_) => _setPane(_AuthPane.promoterSignUp),
           ),
-          selected: _pane == _AuthPane.promoterRequest,
-          onSelected: (_) => _setPane(_AuthPane.promoterRequest),
-        ),
       ],
     );
   }
 
+  _AuthPane? _paneFromUri(Uri uri) {
+    final mode = uri.queryParameters['mode']?.trim();
+    return switch (mode) {
+      'user-signup' => _AuthPane.userSignUp,
+      'promoter-signin' => _AuthPane.promoterSignIn,
+      'promoter-signup' => _AuthPane.promoterSignUp,
+      'user-signin' => _AuthPane.userSignIn,
+      _ => _defaultPaneFromTarget(uri.queryParameters['from']),
+    };
+  }
+
+  _AuthPane? _defaultPaneFromTarget(String? from) {
+    if (from == null || from.isEmpty) {
+      return null;
+    }
+    return from.startsWith('/promoter') ? _AuthPane.promoterSignIn : null;
+  }
+
   void _setPane(_AuthPane pane) {
-    if (AppFlavorConfig.isDemo && pane == _AuthPane.userSignUp) {
+    if (AppFlavorConfig.isDemo &&
+        (pane == _AuthPane.userSignUp || pane == _AuthPane.promoterSignUp)) {
       return;
     }
 
     setState(() {
       _pane = pane;
       _errorText = null;
+      if (pane != _AuthPane.emailPending) {
+        _pendingPromoterSignUp = false;
+      }
     });
   }
 
@@ -987,11 +1007,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final repository = ref.read(nightRadarRepositoryProvider);
 
     try {
-      if (_isUserSignUp) {
+      if (_isUserSignUp || _isPromoterSignUp) {
         final response = await repository.signUp(
           fullName: _fullNameController.text.trim(),
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
+          role: _isPromoterSignUp ? AppRole.promoter : AppRole.user,
         );
 
         if (!mounted) {
@@ -1001,6 +1022,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         if (response.session == null) {
           setState(() {
             _pendingEmail = _emailController.text.trim();
+            _pendingPromoterSignUp = _isPromoterSignUp;
             _pane = _AuthPane.emailPending;
           });
           return;
@@ -1013,7 +1035,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       }
 
       if (mounted) {
-        final from = GoRouterState.of(context).uri.queryParameters['from'];
+        final from = _currentRouteUri()?.queryParameters['from'];
         context.go(
           from != null && from.isNotEmpty && from != '/auth' ? from : '/app',
         );
@@ -1029,6 +1051,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         _errorText = message;
         if (needsConfirmation) {
           _pendingEmail = _emailController.text.trim();
+          _pendingPromoterSignUp = _isPromoterSignUp;
           _pane = _AuthPane.emailPending;
         }
       });
@@ -1088,57 +1111,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
-  Future<void> _submitPromoterRequest() async {
-    if (!_promoterRequestFormKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
-      _errorText = null;
-    });
-
-    try {
-      await ref
-          .read(nightRadarRepositoryProvider)
-          .createPromoterAccessRequest(
-            fullName: _fullNameController.text.trim(),
-            email: _emailController.text.trim(),
-            city: _requestCityController.text.trim().isEmpty
-                ? null
-                : _requestCityController.text.trim(),
-            phone: _requestPhoneController.text.trim().isEmpty
-                ? null
-                : _requestPhoneController.text.trim(),
-            instagramHandle: _requestInstagramController.text.trim().isEmpty
-                ? null
-                : _requestInstagramController.text.trim(),
-            experienceNote: _requestNoteController.text.trim().isEmpty
-                ? null
-                : _requestNoteController.text.trim(),
-          );
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _pendingEmail = _emailController.text.trim();
-        _pane = _AuthPane.promoterRequestSent;
-      });
-    } catch (error) {
-      setState(() {
-        _errorText = _humanizeError(error);
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
-    }
-  }
-
   Future<void> _continueWithGoogle() async {
     setState(() {
       _isSubmitting = true;
@@ -1146,7 +1118,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     });
 
     try {
-      final redirectTo = Uri.base.replace(queryParameters: {}).toString();
+      final redirectTo = Uri.base.toString();
       await ref
           .read(nightRadarRepositoryProvider)
           .signInWithGoogle(redirectTo: redirectTo);
@@ -1166,15 +1138,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
+  Uri? _currentRouteUri() {
+    try {
+      return GoRouterState.of(context).uri;
+    } catch (_) {
+      return null;
+    }
+  }
+
   String _heroBadgeLabel() {
     final copy = context.copy;
     return switch (_pane) {
-      _AuthPane.promoterAccess ||
-      _AuthPane.promoterRequest ||
-      _AuthPane.promoterRequestSent => copy.text(
-        it: 'ACCESSO PR',
-        en: 'PR ACCESS',
-      ),
+      _AuthPane.promoterSignIn ||
+      _AuthPane.promoterSignUp => copy.text(it: 'ACCESSO PR', en: 'PR ACCESS'),
       _AuthPane.emailPending => copy.text(it: 'CHECK EMAIL', en: 'EMAIL CHECK'),
       _ => 'NightRadar MVP',
     };
@@ -1183,17 +1159,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String _heroTitle() {
     final copy = context.copy;
     return switch (_pane) {
-      _AuthPane.promoterAccess => copy.text(
-        it: 'Accesso e attivazione PR in un punto solo.',
-        en: 'Promoter access and activation in one place.',
-      ),
-      _AuthPane.promoterRequest => copy.text(
-        it: 'Apri il canale PR senza rompere il percorso semplice per gli utenti.',
-        en: 'Open the promoter channel without breaking the simple path for users.',
-      ),
-      _AuthPane.promoterRequestSent => copy.text(
-        it: 'La tua richiesta PR e gia entrata nel radar operativo.',
-        en: 'Your promoter request is already inside the operating radar.',
+      _AuthPane.promoterSignIn || _AuthPane.promoterSignUp => copy.text(
+        it: 'Accesso e registrazione PR in un punto solo.',
+        en: 'Promoter access and sign-up in one place.',
       ),
       _AuthPane.emailPending => copy.text(
         it: 'Un ultimo passaggio e poi NightRadar e pronto per te.',
@@ -1209,17 +1177,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String _heroSubtitle() {
     final copy = context.copy;
     return switch (_pane) {
-      _AuthPane.promoterAccess => copy.text(
-        it: 'Se il profilo PR e gia attivo entri subito nella dashboard. Se non lo e ancora, da qui passi alla richiesta dedicata in modo chiaro.',
-        en: 'If the promoter profile is already active you go straight into the dashboard. If not, from here you move clearly into the dedicated request flow.',
-      ),
-      _AuthPane.promoterRequest => copy.text(
-        it: 'La registrazione normale resta per gli utenti. Per il ruolo PR raccogliamo una richiesta dedicata e poi l accesso consigliato passa da Google.',
-        en: 'Standard sign-up stays for users. For the promoter role we collect a dedicated request and then the recommended access goes through Google.',
-      ),
-      _AuthPane.promoterRequestSent => copy.text(
-        it: 'Quando il profilo PR sara attivo potrai entrare con Google usando la stessa email condivisa nella richiesta.',
-        en: 'When the promoter profile is active you can sign in with Google using the same email shared in the request.',
+      _AuthPane.promoterSignIn || _AuthPane.promoterSignUp => copy.text(
+        it: 'Il promoter puo accedere o registrarsi direttamente. Dopo l ingresso completa la scheda con bio, foto o logo e canali pubblici se vuole mostrarli.',
+        en: 'A promoter can sign in or sign up directly. After entry they complete the card with bio, photo or logo, and public channels if they want to show them.',
       ),
       _AuthPane.emailPending => copy.text(
         it: 'Se il progetto richiede verifica email, resti guidato qui con reinvio e accesso rapido appena confermi.',
@@ -1232,8 +1192,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 en: 'This demo is designed to explore users and promoters in read-only mode. For real operations use the live version.',
               )
             : copy.text(
-                it: 'Accedi come utente o richiedi account PR. I locali ricevono solo i dati finali, senza lato app dedicato.',
-                en: 'Sign in as a user or request a promoter account. Venues receive only final data, without a dedicated app side.',
+                it: 'Accedi o registrati come utente o PR. I locali ricevono solo i dati finali, senza lato app dedicato.',
+                en: 'Sign in or sign up as a user or promoter. Venues receive only final data, without a dedicated app side.',
               ),
     };
   }
@@ -1284,8 +1244,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     if (normalized.contains('promoter_access_requests') &&
         normalized.contains('duplicate')) {
       return copy.text(
-        it: 'Esiste gia una richiesta PR aperta per questa email.',
-        en: 'There is already an open promoter request for this email.',
+        it: 'Questa email PR risulta gia collegata. Prova ad accedere.',
+        en: 'This promoter email is already linked. Try signing in.',
       );
     }
 
@@ -1295,11 +1255,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   void _fillDemo(String email) {
     setState(() {
       _pane = email.contains('promoter')
-          ? _AuthPane.promoterAccess
+          ? _AuthPane.promoterSignIn
           : _AuthPane.userSignIn;
       _emailController.text = email;
       _passwordController.text = 'NightRadar123!';
       _errorText = null;
+      _pendingPromoterSignUp = false;
     });
   }
 }

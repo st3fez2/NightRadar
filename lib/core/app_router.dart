@@ -33,6 +33,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isLegalRoute = state.matchedLocation == '/legal';
       final isPublicRoute =
           state.matchedLocation == '/' ||
+          state.matchedLocation == '/app' ||
           isLegalRoute ||
           isAuthRoute ||
           state.fullPath == '/event/:eventId' ||
@@ -103,7 +104,7 @@ class AppHomeScreen extends ConsumerWidget {
     return profileAsync.when(
       data: (profile) {
         if (profile == null) {
-          return const AuthScreen();
+          return const UserHomeScreen();
         }
 
         if (!profile.hasAcceptedLegalVersion(nightRadarLegalVersion)) {
@@ -167,8 +168,8 @@ class PromoterAreaGate extends ConsumerWidget {
               en: 'PR area unavailable',
             ),
             message: copy.text(
-              it: 'Questo account non ha un profilo PR attivo. Accedi come utente oppure attendi l attivazione del canale PR.',
-              en: 'This account does not have an active promoter profile. Sign in as a user or wait for promoter activation.',
+              it: 'Questo account non ha un profilo PR. Accedi come utente oppure crea un account promoter dal percorso PR.',
+              en: 'This account does not have a promoter profile. Sign in as a user or create a promoter account from the promoter path.',
             ),
           );
         }

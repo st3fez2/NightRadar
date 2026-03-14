@@ -93,13 +93,13 @@ void main() {
 
     expect(find.text('Accesso PR diretto'), findsOneWidget);
     expect(find.text('Accedi come PR'), findsOneWidget);
-    expect(find.text('Richiedi attivazione PR'), findsOneWidget);
+    expect(find.text('Registrazione PR'), findsOneWidget);
 
-    await tester.tap(find.text('Richiedi attivazione PR'));
+    await tester.tap(find.text('Registrazione PR'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Richiesta account PR'), findsOneWidget);
-    expect(find.text('Invia richiesta PR'), findsOneWidget);
+    expect(find.text('Registrazione PR automatica'), findsOneWidget);
+    expect(find.text('Registrati come PR'), findsOneWidget);
   });
 
   testWidgets('suspended promoter sees a blocked state instead of dashboard', (

@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -78,6 +79,7 @@ class NightRadarRepository {
     required String fullName,
     required String email,
     required String password,
+    AppRole role = AppRole.user,
   }) {
     _ensureMutationsAllowed(
       'La registrazione completa e disponibile solo nella versione attiva.',
@@ -90,6 +92,7 @@ class NightRadarRepository {
       password: password,
       data: {
         'full_name': fullName,
+        'requested_role': role == AppRole.promoter ? 'promoter' : 'user',
         'disclaimer_accepted_at': acceptedAt,
         'privacy_accepted_at': acceptedAt,
         'legal_version': nightRadarLegalVersion,
@@ -181,6 +184,9 @@ class NightRadarRepository {
   }
 
   Future<List<EventSummary>> fetchEventFeed() async {
+    final visibleStatuses = AppFlavorConfig.isDemo
+        ? const ['published', 'live', 'completed']
+        : const ['published', 'live'];
     final eventRows = await _client
         .from('events')
         .select(
@@ -192,7 +198,7 @@ class NightRadarRepository {
           'venue:venues!events_venue_id_fkey(id, name, city, address_line, dress_code, price_band)',
         )
         .eq('is_public', true)
-        .inFilter('status', ['published', 'live'])
+        .inFilter('status', visibleStatuses)
         .order('starts_at');
 
     final eventMaps = eventRows.cast<Map<String, dynamic>>();
@@ -206,42 +212,43 @@ class NightRadarRepository {
     final offersByEventId = await _fetchOfferMap(eventIds);
     final likeCountsByEventId = await _fetchEventLikeCounts(eventIds);
 
+    final mappedEvents = eventMaps.map((event) {
+      final id = event['id'] as String;
+      var base = _buildEventSummary(
+        event,
+        radar: radarByEventId[id],
+      ).copyWith(likeCount: likeCountsByEventId[id] ?? 0);
+      final offers = offersByEventId[id] ?? const <Map<String, dynamic>>[];
+
+      if (offers.isEmpty) {
+        return base;
+      }
+
+      final cheapest = offers
+          .map((offer) => (offer['price'] as num?)?.toDouble() ?? 0)
+          .reduce(min);
+      final leadPromoter = _selectFeedPromoter(offers);
+
+      base = base.copyWith(bestOfferPrice: cheapest, offerCount: offers.length);
+      if (leadPromoter == null) {
+        return base;
+      }
+
+      return base.copyWith(
+        primaryPromoterId: leadPromoter['id'] as String?,
+        primaryPromoterName: leadPromoter['display_name'] as String?,
+        primaryPromoterRating:
+            (leadPromoter['rating'] as num?)?.toDouble() ?? 0,
+        primaryPromoterVerified: leadPromoter['is_verified'] as bool? ?? false,
+      );
+    }).toList();
+
+    if (AppFlavorConfig.isDemo) {
+      return mappedEvents;
+    }
+
     final now = DateTime.now();
-    return eventMaps
-        .map((event) {
-          final id = event['id'] as String;
-          var base = _buildEventSummary(
-            event,
-            radar: radarByEventId[id],
-          ).copyWith(likeCount: likeCountsByEventId[id] ?? 0);
-          final offers = offersByEventId[id] ?? const <Map<String, dynamic>>[];
-
-          if (offers.isEmpty) {
-            return base;
-          }
-
-          final cheapest = offers
-              .map((offer) => (offer['price'] as num?)?.toDouble() ?? 0)
-              .reduce(min);
-          final leadPromoter = _selectFeedPromoter(offers);
-
-          base = base.copyWith(
-            bestOfferPrice: cheapest,
-            offerCount: offers.length,
-          );
-          if (leadPromoter == null) {
-            return base;
-          }
-
-          return base.copyWith(
-            primaryPromoterId: leadPromoter['id'] as String?,
-            primaryPromoterName: leadPromoter['display_name'] as String?,
-            primaryPromoterRating:
-                (leadPromoter['rating'] as num?)?.toDouble() ?? 0,
-            primaryPromoterVerified:
-                leadPromoter['is_verified'] as bool? ?? false,
-          );
-        })
+    return mappedEvents
         .where((event) => event.effectiveEndsAt.isAfter(now))
         .toList();
   }
@@ -747,6 +754,39 @@ class NightRadarRepository {
         .from('profiles')
         .update({'avatar_url': avatarUrl})
         .eq('id', profile.id);
+  }
+
+  Future<String> uploadPromoterCardImage({
+    required Uint8List bytes,
+    required String fileName,
+    String? contentType,
+  }) async {
+    _ensureMutationsAllowed(
+      'La demo non consente di caricare immagini nella scheda PR.',
+    );
+
+    final profile = await getCurrentProfile();
+    if (profile == null || profile.role != AppRole.promoter) {
+      throw const AuthException('Profilo PR non disponibile');
+    }
+
+    final normalizedName = fileName.trim().isEmpty
+        ? 'promoter-card.png'
+        : fileName.trim();
+    final path = '${profile.id}/card-media/$normalizedName';
+
+    await _client.storage
+        .from('promoter-media')
+        .uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: contentType ?? _guessImageContentType(normalizedName),
+          ),
+        );
+
+    return _client.storage.from('promoter-media').getPublicUrl(path);
   }
 
   Future<void> togglePromoterReaction({
@@ -1504,6 +1544,20 @@ class NightRadarRepository {
     }
 
     return byPromoterId;
+  }
+
+  String _guessImageContentType(String fileName) {
+    final normalized = fileName.toLowerCase();
+    if (normalized.endsWith('.jpg') || normalized.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    }
+    if (normalized.endsWith('.webp')) {
+      return 'image/webp';
+    }
+    if (normalized.endsWith('.gif')) {
+      return 'image/gif';
+    }
+    return 'image/png';
   }
 
   DateTime? _parseDateTime(String? value) {

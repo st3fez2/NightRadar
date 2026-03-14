@@ -17,8 +17,8 @@ String nightRadarDisclaimerSummary(AppCopy copy) {
 
 String nightRadarPrivacySummary(AppCopy copy) {
   return copy.text(
-    it: 'NightRadar usa solo i dati necessari per account, prenotazioni, richieste ai PR, accessi ed export operativi.',
-    en: 'NightRadar uses only the data needed for accounts, reservations, promoter requests, entry flows, and operational exports.',
+    it: 'NightRadar usa solo i dati necessari per account, prenotazioni, schede PR, accessi ed export operativi.',
+    en: 'NightRadar uses only the data needed for accounts, reservations, promoter cards, entry flows, and operational exports.',
   );
 }
 
@@ -84,8 +84,8 @@ List<LegalSection> nightRadarPrivacySections(AppCopy copy) {
       title: copy.text(it: 'Titolare e ambito', en: 'Controller and scope'),
       points: [
         copy.text(
-          it: 'NightRadar e il riferimento operativo per i trattamenti necessari a account, liste, richieste ai PR, accessi e funzioni collegate al servizio.',
-          en: 'NightRadar is the operational point of reference for the processing needed for accounts, guest lists, promoter requests, entry flows, and related service functions.',
+          it: 'NightRadar e il riferimento operativo per i trattamenti necessari a account, liste, schede PR, accessi e funzioni collegate al servizio.',
+          en: 'NightRadar is the operational point of reference for the processing needed for accounts, guest lists, promoter cards, entry flows, and related service functions.',
         ),
         _privacyContactLine(copy),
         copy.text(
@@ -98,8 +98,8 @@ List<LegalSection> nightRadarPrivacySections(AppCopy copy) {
       title: copy.text(it: 'Dati raccolti', en: 'Collected data'),
       points: [
         copy.text(
-          it: 'Raccogliamo dati account come nome, email e profilo inseriti da utente o PR, inclusi bio, avatar e social pubblici se scelti dal PR.',
-          en: 'We collect account data such as name, email, and profile details entered by the user or promoter, including bio, avatar, and public social handles if chosen by the promoter.',
+          it: 'Raccogliamo dati account come nome, email e profilo inseriti da utente o PR, inclusi bio, avatar, foto o logo e social pubblici se scelti dal PR.',
+          en: 'We collect account data such as name, email, and profile details entered by the user or promoter, including bio, avatar, photo or logo, and public social handles if chosen by the promoter.',
         ),
         copy.text(
           it: 'Quando prenoti o gestisci una lista trattiamo dati operativi come nome, cognome, telefono, email, nome lista o tavolo, numero partecipanti, note ed eventuali credenziali di accesso.',
@@ -118,8 +118,8 @@ List<LegalSection> nightRadarPrivacySections(AppCopy copy) {
       ),
       points: [
         copy.text(
-          it: 'Usiamo i dati per autenticazione, guest list, wallet, richieste ai PR, supporto operativo e consegna dei dati finali ai soggetti coinvolti nell evento.',
-          en: 'We use data for authentication, guest lists, wallet flows, promoter requests, operational support, and delivery of final data to the parties involved in the event.',
+          it: 'Usiamo i dati per autenticazione, guest list, wallet, schede PR, supporto operativo e consegna dei dati finali ai soggetti coinvolti nell evento.',
+          en: 'We use data for authentication, guest lists, wallet flows, promoter cards, operational support, and delivery of final data to the parties involved in the event.',
         ),
         copy.text(
           it: 'Le basi del trattamento sono esecuzione del servizio richiesto, misure precontrattuali, obblighi di legge ove applicabili e interesse legittimo a sicurezza e prevenzione abusi; il consenso e usato dove richiesto.',
