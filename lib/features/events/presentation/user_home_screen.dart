@@ -90,18 +90,6 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                 ),
                 trailing: const RadarChip(label: 'active'),
               ),
-              const SizedBox(height: 18),
-              PublicLinkCard(
-                compact: true,
-                title: copy.text(
-                  it: 'Condividi NightRadar con il tuo gruppo',
-                  en: 'Share NightRadar with your group',
-                ),
-                subtitle: copy.text(
-                  it: 'La home utente tiene sempre visibile QR e link pubblico, cosi puoi girarli al volo ad amici e nuovi invitati.',
-                  en: 'The user home keeps QR and public link visible, so you can forward them quickly to friends and new guests.',
-                ),
-              ),
               if (!isVerifiedSession) ...[
                 const SizedBox(height: 12),
                 _AnonymousAccessCard(
@@ -445,6 +433,18 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                     : () => context.push(
                         '/auth?mode=promoter-signup&from=${Uri.encodeComponent('/promoter')}',
                       ),
+              ),
+              const SizedBox(height: 16),
+              PublicLinkCard(
+                compact: true,
+                title: copy.text(
+                  it: 'Condividi NightRadar',
+                  en: 'Share NightRadar',
+                ),
+                subtitle: copy.text(
+                  it: 'QR e link pubblico restano disponibili in fondo, pronti da girare al gruppo senza occupare la parte alta della home.',
+                  en: 'The public QR and link stay available at the bottom, ready to share with the group without taking over the top of the home.',
+                ),
               ),
             ],
           ),

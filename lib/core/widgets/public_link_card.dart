@@ -47,13 +47,13 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
           en: 'Share the project public link right away, download the QR, or open the live site.',
         );
     final qrSize = compactCard
-        ? (narrow ? 112.0 : 132.0)
+        ? (narrow ? 72.0 : 88.0)
         : (narrow ? 170.0 : 210.0);
 
     return Card(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final splitLayout = compactCard && constraints.maxWidth >= 620;
+          final splitLayout = compactCard && constraints.maxWidth >= 520;
 
           return Padding(
             padding: EdgeInsets.all(compactCard ? 16 : 20),
@@ -140,7 +140,7 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
                         en: 'PUBLIC LINK LIVE',
                       ),
                 style: TextStyle(
-                  fontSize: compactCard ? 11 : 12,
+                  fontSize: compactCard ? 10 : 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.6,
                 ),
@@ -158,7 +158,7 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
         Text(
           title,
           style: compactCard
-              ? Theme.of(context).textTheme.titleMedium
+              ? Theme.of(context).textTheme.titleSmall
               : Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
@@ -176,7 +176,7 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
       padding: EdgeInsets.all(compactCard ? 10 : 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(compactCard ? 22 : 28),
+        borderRadius: BorderRadius.circular(compactCard ? 18 : 28),
         boxShadow: const [
           BoxShadow(
             color: Color(0x12000000),
@@ -220,37 +220,71 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
           child: SelectableText(
             _publicUrl,
             style: Theme.of(context).textTheme.bodyMedium,
+            maxLines: compactCard ? 1 : null,
           ),
         ),
         SizedBox(height: compactCard ? 12 : 16),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            ElevatedButton.icon(
-              onPressed: _isWorking ? null : _shareQr,
-              icon: const Icon(Icons.ios_share_rounded),
-              label: Text(
-                context.copy.text(it: 'Condividi QR', en: 'Share QR'),
+        compactCard
+            ? Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: [
+                  _CompactLinkAction(
+                    onPressed: _isWorking ? null : _shareQr,
+                    icon: Icons.ios_share_rounded,
+                    label: context.copy.text(it: 'QR', en: 'QR'),
+                  ),
+                  _CompactLinkAction(
+                    onPressed: _isWorking ? null : _downloadQr,
+                    icon: Icons.download_rounded,
+                    label: context.copy.text(it: 'Scarica', en: 'Download'),
+                  ),
+                  _CompactLinkAction(
+                    onPressed: _isWorking ? null : _copyLink,
+                    icon: Icons.content_copy_rounded,
+                    label: context.copy.text(it: 'Copia', en: 'Copy'),
+                  ),
+                  _CompactLinkAction(
+                    onPressed: _isWorking ? null : _openLink,
+                    icon: Icons.open_in_new_rounded,
+                    label: context.copy.text(it: 'Apri', en: 'Open'),
+                  ),
+                ],
+              )
+            : Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _isWorking ? null : _shareQr,
+                    icon: const Icon(Icons.ios_share_rounded),
+                    label: Text(
+                      context.copy.text(it: 'Condividi QR', en: 'Share QR'),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _isWorking ? null : _downloadQr,
+                    icon: const Icon(Icons.download_rounded),
+                    label: Text(
+                      context.copy.text(it: 'Scarica', en: 'Download'),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _isWorking ? null : _copyLink,
+                    icon: const Icon(Icons.content_copy_rounded),
+                    label: Text(
+                      context.copy.text(it: 'Copia link', en: 'Copy link'),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _isWorking ? null : _openLink,
+                    icon: const Icon(Icons.open_in_new_rounded),
+                    label: Text(
+                      context.copy.text(it: 'Apri sito', en: 'Open site'),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            OutlinedButton.icon(
-              onPressed: _isWorking ? null : _downloadQr,
-              icon: const Icon(Icons.download_rounded),
-              label: Text(context.copy.text(it: 'Scarica', en: 'Download')),
-            ),
-            OutlinedButton.icon(
-              onPressed: _isWorking ? null : _copyLink,
-              icon: const Icon(Icons.content_copy_rounded),
-              label: Text(context.copy.text(it: 'Copia link', en: 'Copy link')),
-            ),
-            TextButton.icon(
-              onPressed: _isWorking ? null : _openLink,
-              icon: const Icon(Icons.open_in_new_rounded),
-              label: Text(context.copy.text(it: 'Apri sito', en: 'Open site')),
-            ),
-          ],
-        ),
       ],
     );
   }
@@ -382,5 +416,31 @@ class _PublicLinkCardState extends State<PublicLinkCard> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _CompactLinkAction extends StatelessWidget {
+  const _CompactLinkAction({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+  });
+
+  final VoidCallback? onPressed;
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        minimumSize: const Size(0, 0),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
   }
 }

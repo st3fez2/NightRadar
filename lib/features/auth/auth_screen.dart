@@ -186,22 +186,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                PublicLinkCard(
-                  compact: true,
-                  title: copy.text(
-                    it: 'QR pubblico sempre disponibile',
-                    en: 'Public QR always available',
-                  ),
-                  subtitle: copy.text(
-                    it: 'Dalla landing puoi condividere il progetto, aprire il sito live o scaricare il QR senza autenticarti.',
-                    en: 'From the landing page you can share the project, open the live site, or download the QR without signing in.',
-                  ),
-                ),
-                if (AppFlavorConfig.isDemo) ...[
-                  const SizedBox(height: 12),
-                  const FlavorNoticeCard(compact: true),
-                ],
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -279,6 +263,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
                       _ => _buildUserAuthForm(context),
                     },
+                  ),
+                ),
+                if (AppFlavorConfig.isDemo) ...[
+                  const SizedBox(height: 12),
+                  const FlavorNoticeCard(compact: true),
+                ],
+                const SizedBox(height: 16),
+                PublicLinkCard(
+                  compact: true,
+                  title: copy.text(
+                    it: 'Condividi NightRadar',
+                    en: 'Share NightRadar',
+                  ),
+                  subtitle: copy.text(
+                    it: 'QR e link pubblico sempre pronti, ma tenuti in coda per non rubare spazio all accesso.',
+                    en: 'Public QR and link always ready, but kept at the bottom so they do not steal focus from access.',
                   ),
                 ),
               ],
@@ -537,6 +537,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 it: 'Se il tuo account PR e gia registrato, Google ti autentica e ti porta direttamente nell area promoter.',
                 en: 'If your promoter account is already registered, Google authenticates you and takes you straight into the promoter area.',
               ),
+              promoterSignupFlow: true,
             ),
             const SizedBox(height: 18),
             Row(
@@ -1079,6 +1080,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+        if (_pane == _AuthPane.promoterSignIn) {
+          await repository.promoteCurrentUserToPromoter();
+          ref.invalidate(currentProfileProvider);
+        }
+      }
+
+      if (_isPromoterSignUp) {
+        await repository.promoteCurrentUserToPromoter();
+        ref.invalidate(currentProfileProvider);
       }
 
       if (mounted) {
