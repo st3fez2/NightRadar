@@ -82,18 +82,6 @@ class PromoterDashboardScreen extends ConsumerWidget {
                     ),
                     trailing: const RadarChip(label: 'hot'),
                   ),
-                  const SizedBox(height: 16),
-                  PublicLinkCard(
-                    compact: true,
-                    title: copy.text(
-                      it: 'Landing pubblica sempre pronta da girare',
-                      en: 'Public landing always ready to share',
-                    ),
-                    subtitle: copy.text(
-                      it: 'Il QR della main page resta disponibile anche nell area PR, cosi puoi condividere il progetto in un tocco mentre lavori sulle liste.',
-                      en: 'The main page QR stays available in the promoter area too, so you can share the project in one tap while working on lists.',
-                    ),
-                  ),
                   const SizedBox(height: 12),
                   _PromoterIdentityCard(
                     promoterCard: dashboard.promoterCard,
@@ -490,6 +478,18 @@ class PromoterDashboardScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
+                  const SizedBox(height: 16),
+                  PublicLinkCard(
+                    compact: true,
+                    title: copy.text(
+                      it: 'Condividi NightRadar',
+                      en: 'Share NightRadar',
+                    ),
+                    subtitle: copy.text(
+                      it: 'Link e QR pubblico restano disponibili in fondo anche nell area PR, pronti da condividere senza rubare spazio operativo.',
+                      en: 'The public link and QR stay available at the bottom in the promoter area too, ready to share without stealing operational space.',
+                    ),
+                  ),
                 ],
               ),
             ),
