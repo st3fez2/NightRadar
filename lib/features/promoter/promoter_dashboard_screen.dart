@@ -162,23 +162,11 @@ class PromoterDashboardScreen extends ConsumerWidget {
                       ElevatedButton.icon(
                         onPressed: !AppFlavorConfig.allowMutations
                             ? null
-                            : () {
-                                if (dashboard.venues.isEmpty) {
-                                  _showActionBlockedDialog(
-                                    context,
-                                    title: copy.text(
-                                      it: 'Serve un locale collegato',
-                                      en: 'A linked venue is required',
-                                    ),
-                                    message: copy.text(
-                                      it: 'Per pubblicare una serata devi prima collegare il tuo profilo PR ad almeno un locale partner. Appena il locale e attivo nella tua dashboard, qui potrai creare eventi, tavoli e liste.',
-                                      en: 'To publish a night, your promoter profile must first be linked to at least one partner venue. As soon as a venue is active in your dashboard, you can create events, tables, and lists here.',
-                                    ),
-                                  );
-                                  return;
-                                }
-                                _openCreateEventDialog(context, ref, dashboard);
-                              },
+                            : () => _openCreateEventDialog(
+                                context,
+                                ref,
+                                dashboard,
+                              ),
                         icon: const Icon(Icons.add_circle_outline_rounded),
                         label: Text(
                           copy.text(it: 'Nuovo evento', en: 'New event'),
@@ -244,36 +232,15 @@ class PromoterDashboardScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  if (dashboard.venues.isEmpty) ...[
-                    _PromoterSetupCard(
-                      title: copy.text(
-                        it: 'Setup PR incompleto',
-                        en: 'Promoter setup incomplete',
+                  if (dashboard.venues.isNotEmpty) ...[
+                    Text(
+                      copy.text(
+                        it: 'Locali e luoghi inseriti',
+                        en: 'Saved venues and locations',
                       ),
-                      message: copy.text(
-                        it: 'La tua scheda PR e gia attiva, ma per pubblicare eventi e aprire tavoli o liste devi avere almeno un locale collegato. Finche il locale non e associato, la parte operativa resta in sola consultazione.',
-                        en: 'Your promoter card is already active, but to publish events and open tables or guest lists you need at least one linked venue. Until a venue is attached, the operational part stays view-only.',
-                      ),
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    const SizedBox(height: 20),
-                  ],
-                  Text(
-                    copy.text(it: 'Locali collegati', en: 'Linked venues'),
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 12),
-                  if (dashboard.venues.isEmpty)
-                    EmptyStateCard(
-                      title: copy.text(
-                        it: 'Nessun locale associato',
-                        en: 'No linked venues',
-                      ),
-                      message: copy.text(
-                        it: 'Collega il tuo profilo PR a un locale per poter creare serate e liste.',
-                        en: 'Link your promoter profile to a venue so you can create nights and lists.',
-                      ),
-                    )
-                  else
+                    const SizedBox(height: 12),
                     ...dashboard.venues.map(
                       (venue) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
@@ -288,7 +255,8 @@ class PromoterDashboardScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 20),
+                  ],
                   Text(
                     copy.text(it: 'Serate e liste', en: 'Events and lists'),
                     style: Theme.of(context).textTheme.titleLarge,
@@ -1146,6 +1114,22 @@ class PromoterDashboardScreen extends ConsumerWidget {
     return 'https://www.tiktok.com/$handle';
   }
 
+  Future<PlatformFile?> _pickSingleImageFile() async {
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+      withData: true,
+    );
+    if (picked == null || picked.files.isEmpty) {
+      return null;
+    }
+    final file = picked.files.first;
+    if (file.bytes == null) {
+      return null;
+    }
+    return file;
+  }
+
   Future<void> _openCreateEventDialog(
     BuildContext context,
     WidgetRef ref,
@@ -1153,6 +1137,9 @@ class PromoterDashboardScreen extends ConsumerWidget {
   ) async {
     final copy = context.copy;
     final formKey = GlobalKey<FormState>();
+    final venueNameController = TextEditingController();
+    final cityController = TextEditingController(text: data.profile.city ?? '');
+    final addressLineController = TextEditingController();
     final titleController = TextEditingController();
     final genreController = TextEditingController(text: 'house');
     final descriptionController = TextEditingController();
@@ -1169,11 +1156,13 @@ class PromoterDashboardScreen extends ConsumerWidget {
     final promoCaptionController = TextEditingController();
     DateTime startsAt = DateTime.now().add(const Duration(days: 7, hours: 3));
     int? minimumAge;
-    var selectedVenueId = data.venues.first.id;
     var allowWhatsAppRequests = data.profile.phone?.trim().isNotEmpty == true;
     var allowInboxRequests = true;
     var allowEmailRequests = data.profile.email?.trim().isNotEmpty == true;
     var isSaving = false;
+    Uint8List? coverImageBytes;
+    String? coverImageFileName;
+    String? coverImageUrl;
     String? errorText;
     final messenger = ScaffoldMessenger.of(context);
 
@@ -1192,24 +1181,46 @@ class PromoterDashboardScreen extends ConsumerWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedVenueId,
+                      TextFormField(
+                        controller: venueNameController,
                         decoration: InputDecoration(
                           labelText: copy.text(it: 'Locale', en: 'Venue'),
                         ),
-                        items: data.venues
-                            .map(
-                              (venue) => DropdownMenuItem(
-                                value: venue.id,
-                                child: Text(venue.name),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedVenueId = value ?? selectedVenueId;
-                          });
+                        validator: (value) {
+                          if (value == null || value.trim().length < 2) {
+                            return copy.text(
+                              it: 'Inserisci il nome del locale',
+                              en: 'Enter the venue name',
+                            );
+                          }
+                          return null;
                         },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: cityController,
+                        decoration: InputDecoration(
+                          labelText: copy.text(it: 'Citta', en: 'City'),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().length < 2) {
+                            return copy.text(
+                              it: 'Inserisci la citta',
+                              en: 'Enter the city',
+                            );
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: addressLineController,
+                        decoration: InputDecoration(
+                          labelText: copy.text(
+                            it: 'Indirizzo o luogo',
+                            en: 'Address or location',
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
@@ -1247,6 +1258,53 @@ class PromoterDashboardScreen extends ConsumerWidget {
                           ),
                         ),
                         maxLines: 3,
+                      ),
+                      const SizedBox(height: 12),
+                      _MediaPickerCard(
+                        title: copy.text(
+                          it: 'Immagine evento',
+                          en: 'Event image',
+                        ),
+                        subtitle: copy.text(
+                          it: 'Carica da galleria la cover della serata. Se non la scegli, l evento resta senza immagine.',
+                          en: 'Upload the event cover from your gallery. If you skip it, the event stays without an image.',
+                        ),
+                        previewUrl: coverImageUrl,
+                        previewBytes: coverImageBytes,
+                        pickLabel: copy.text(
+                          it: 'Carica da galleria',
+                          en: 'Upload from gallery',
+                        ),
+                        clearLabel: copy.text(
+                          it: 'Rimuovi immagine',
+                          en: 'Remove image',
+                        ),
+                        onPick: isSaving || AppFlavorConfig.isDemo
+                            ? null
+                            : () async {
+                                final file = await _pickSingleImageFile();
+                                if (file == null) {
+                                  return;
+                                }
+                                setState(() {
+                                  coverImageBytes = file.bytes;
+                                  coverImageFileName = file.name;
+                                  coverImageUrl = null;
+                                  errorText = null;
+                                });
+                              },
+                        onClear:
+                            coverImageBytes == null && coverImageUrl == null
+                            ? null
+                            : () {
+                                setState(() {
+                                  coverImageBytes = null;
+                                  coverImageFileName = null;
+                                  coverImageUrl = null;
+                                });
+                              },
+                        aspectRatio: 16 / 9,
+                        icon: Icons.photo_camera_back_outlined,
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<int?>(
@@ -1481,10 +1539,25 @@ class PromoterDashboardScreen extends ConsumerWidget {
                                 en: 'Enter a promoter email',
                               );
                             }
+                            final finalCoverImageUrl = coverImageBytes == null
+                                ? coverImageUrl
+                                : await ref
+                                      .read(nightRadarRepositoryProvider)
+                                      .uploadPromoterEventImage(
+                                        bytes: coverImageBytes!,
+                                        fileName:
+                                            coverImageFileName ??
+                                            'event-cover.png',
+                                      );
                             await ref
                                 .read(nightRadarRepositoryProvider)
                                 .createPromoterEvent(
-                                  venueId: selectedVenueId,
+                                  venueName: venueNameController.text.trim(),
+                                  city: cityController.text.trim(),
+                                  addressLine:
+                                      addressLineController.text.trim().isEmpty
+                                      ? null
+                                      : addressLineController.text.trim(),
                                   title: titleController.text.trim(),
                                   startsAt: startsAt,
                                   genre: genreController.text.trim().isEmpty
@@ -1494,6 +1567,7 @@ class PromoterDashboardScreen extends ConsumerWidget {
                                       descriptionController.text.trim().isEmpty
                                       ? null
                                       : descriptionController.text.trim(),
+                                  coverImageUrl: finalCoverImageUrl,
                                   minimumAge: minimumAge,
                                   contactPhone:
                                       contactPhoneController.text.trim().isEmpty
@@ -1617,9 +1691,6 @@ class PromoterDashboardScreen extends ConsumerWidget {
     final bioController = TextEditingController(
       text: data.promoterCard.bio ?? '',
     );
-    final avatarController = TextEditingController(
-      text: data.promoterCard.avatarUrl ?? '',
-    );
     final instagramController = TextEditingController(
       text: data.promoterCard.instagramHandle ?? '',
     );
@@ -1627,7 +1698,9 @@ class PromoterDashboardScreen extends ConsumerWidget {
       text: data.promoterCard.tiktokHandle ?? '',
     );
     var isSaving = false;
-    var isUploading = false;
+    String? avatarUrl = data.promoterCard.avatarUrl;
+    Uint8List? avatarBytes;
+    String? avatarFileName;
     String? errorText;
 
     await showDialog<void>(
@@ -1670,95 +1743,49 @@ class PromoterDashboardScreen extends ConsumerWidget {
                         maxLines: 4,
                       ),
                       const SizedBox(height: 12),
-                      TextFormField(
-                        controller: avatarController,
-                        decoration: InputDecoration(
-                          labelText: copy.text(
-                            it: 'URL foto o logo',
-                            en: 'Photo or logo URL',
-                          ),
+                      _MediaPickerCard(
+                        title: copy.text(
+                          it: 'Foto o logo profilo',
+                          en: 'Profile photo or logo',
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              copy.text(
-                                it: 'Puoi incollare un URL oppure caricare direttamente una foto o un logo.',
-                                en: 'You can paste a URL or upload a photo or logo directly.',
-                              ),
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          OutlinedButton.icon(
-                            onPressed:
-                                isSaving ||
-                                    isUploading ||
-                                    AppFlavorConfig.isDemo
-                                ? null
-                                : () async {
-                                    final picked = await FilePicker.platform
-                                        .pickFiles(
-                                          type: FileType.image,
-                                          allowMultiple: false,
-                                          withData: true,
-                                        );
-                                    final file =
-                                        picked != null &&
-                                            picked.files.isNotEmpty
-                                        ? picked.files.first
-                                        : null;
-                                    if (file == null || file.bytes == null) {
-                                      return;
-                                    }
-
-                                    setState(() {
-                                      isUploading = true;
-                                      errorText = null;
-                                    });
-
-                                    try {
-                                      final imageUrl = await ref
-                                          .read(nightRadarRepositoryProvider)
-                                          .uploadPromoterCardImage(
-                                            bytes: file.bytes!,
-                                            fileName: file.name,
-                                          );
-                                      avatarController.text = imageUrl;
-                                    } catch (error) {
-                                      if (context.mounted) {
-                                        setState(() {
-                                          errorText = error.toString();
-                                        });
-                                      }
-                                    } finally {
-                                      if (context.mounted) {
-                                        setState(() {
-                                          isUploading = false;
-                                        });
-                                      }
-                                    }
-                                  },
-                            icon: Icon(
-                              isUploading
-                                  ? Icons.hourglass_top_rounded
-                                  : Icons.upload_file_rounded,
-                            ),
-                            label: Text(
-                              isUploading
-                                  ? copy.text(
-                                      it: 'Carico...',
-                                      en: 'Uploading...',
-                                    )
-                                  : copy.text(
-                                      it: 'Carica immagine',
-                                      en: 'Upload image',
-                                    ),
-                            ),
-                          ),
-                        ],
+                        subtitle: copy.text(
+                          it: 'Scegli dalla galleria la foto o il logo da mostrare nella tua scheda PR.',
+                          en: 'Pick from your gallery the photo or logo to show on your promoter card.',
+                        ),
+                        previewUrl: avatarUrl,
+                        previewBytes: avatarBytes,
+                        pickLabel: copy.text(
+                          it: 'Carica da galleria',
+                          en: 'Upload from gallery',
+                        ),
+                        clearLabel: copy.text(
+                          it: 'Rimuovi immagine',
+                          en: 'Remove image',
+                        ),
+                        onPick: isSaving || AppFlavorConfig.isDemo
+                            ? null
+                            : () async {
+                                final file = await _pickSingleImageFile();
+                                if (file == null) {
+                                  return;
+                                }
+                                setState(() {
+                                  avatarBytes = file.bytes;
+                                  avatarFileName = file.name;
+                                  errorText = null;
+                                });
+                              },
+                        onClear: avatarBytes == null && avatarUrl == null
+                            ? null
+                            : () {
+                                setState(() {
+                                  avatarBytes = null;
+                                  avatarFileName = null;
+                                  avatarUrl = null;
+                                });
+                              },
+                        aspectRatio: 1,
+                        icon: Icons.account_box_outlined,
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
@@ -1808,6 +1835,16 @@ class PromoterDashboardScreen extends ConsumerWidget {
                           });
 
                           try {
+                            final finalAvatarUrl = avatarBytes == null
+                                ? avatarUrl
+                                : await ref
+                                      .read(nightRadarRepositoryProvider)
+                                      .uploadPromoterCardImage(
+                                        bytes: avatarBytes!,
+                                        fileName:
+                                            avatarFileName ??
+                                            'promoter-card.png',
+                                      );
                             await ref
                                 .read(nightRadarRepositoryProvider)
                                 .updatePromoterCard(
@@ -1816,10 +1853,7 @@ class PromoterDashboardScreen extends ConsumerWidget {
                                   bio: bioController.text.trim().isEmpty
                                       ? null
                                       : bioController.text.trim(),
-                                  avatarUrl:
-                                      avatarController.text.trim().isEmpty
-                                      ? null
-                                      : avatarController.text.trim(),
+                                  avatarUrl: finalAvatarUrl,
                                   instagramHandle:
                                       instagramController.text.trim().isEmpty
                                       ? null
@@ -3388,38 +3422,93 @@ class _DashboardModeCard extends StatelessWidget {
   }
 }
 
-class _PromoterSetupCard extends StatelessWidget {
-  const _PromoterSetupCard({required this.title, required this.message});
+class _MediaPickerCard extends StatelessWidget {
+  const _MediaPickerCard({
+    required this.title,
+    required this.subtitle,
+    required this.pickLabel,
+    required this.clearLabel,
+    required this.icon,
+    this.previewUrl,
+    this.previewBytes,
+    this.onPick,
+    this.onClear,
+    this.aspectRatio = 1,
+  });
 
   final String title;
-  final String message;
+  final String subtitle;
+  final String pickLabel;
+  final String clearLabel;
+  final IconData icon;
+  final String? previewUrl;
+  final Uint8List? previewBytes;
+  final VoidCallback? onPick;
+  final VoidCallback? onClear;
+  final double aspectRatio;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasPreview =
+        previewBytes != null || previewUrl?.trim().isNotEmpty == true;
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7F1EA),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE0D2C4)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.storefront_outlined, color: theme.colorScheme.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: theme.textTheme.titleMedium),
-                const SizedBox(height: 6),
-                Text(message),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Text(subtitle, style: theme.textTheme.bodySmall),
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: AspectRatio(
+            aspectRatio: aspectRatio,
+            child: Container(
+              color: const Color(0xFFF7F1EA),
+              child: hasPreview
+                  ? previewBytes != null
+                        ? Image.memory(previewBytes!, fit: BoxFit.cover)
+                        : Image.network(
+                            previewUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                _mediaPlaceholder(theme),
+                          )
+                  : _mediaPlaceholder(theme),
             ),
           ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            OutlinedButton.icon(
+              onPressed: onPick,
+              icon: const Icon(Icons.photo_library_outlined),
+              label: Text(pickLabel),
+            ),
+            if (onClear != null)
+              TextButton.icon(
+                onPressed: onClear,
+                icon: const Icon(Icons.delete_outline_rounded),
+                label: Text(clearLabel),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _mediaPlaceholder(ThemeData theme) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 34, color: theme.colorScheme.primary),
+          const SizedBox(height: 10),
+          Text('NightRadar', style: theme.textTheme.titleSmall),
         ],
       ),
     );
@@ -3474,58 +3563,84 @@ class _PromoterIdentityCard extends StatelessWidget {
                       ),
                       if (promoterCard.isVerified)
                         Chip(
+                          avatar: const Icon(Icons.verified_rounded, size: 18),
                           label: Text(
                             copy.text(it: 'Verificato', en: 'Verified'),
                           ),
                         ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: onEdit,
+                        icon: const Icon(Icons.edit_outlined),
+                        label: Text(copy.text(it: 'Modifica', en: 'Edit')),
+                      ),
+                      if (onOpenInstagram != null)
+                        OutlinedButton.icon(
+                          onPressed: onOpenInstagram,
+                          icon: const Icon(Icons.camera_alt_outlined),
+                          label: const Text('Instagram'),
+                        ),
+                      if (onOpenTikTok != null)
+                        OutlinedButton.icon(
+                          onPressed: onOpenTikTok,
+                          icon: const Icon(Icons.music_note_outlined),
+                          label: const Text('TikTok'),
+                        ),
                       Chip(
                         avatar: const Icon(
-                          Icons.thumb_up_alt_rounded,
-                          size: 16,
+                          Icons.thumb_up_alt_outlined,
+                          size: 18,
                         ),
                         label: Text('${promoterCard.reactions.thumbsUpCount}'),
                       ),
                       Chip(
-                        avatar: const Icon(Icons.favorite_rounded, size: 16),
+                        avatar: const Icon(
+                          Icons.favorite_border_rounded,
+                          size: 18,
+                        ),
                         label: Text('${promoterCard.reactions.heartCount}'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 12),
                   Text(
                     promoterCard.bio?.trim().isNotEmpty == true
                         ? promoterCard.bio!
                         : copy.text(
-                            it: 'Questa e la tua scheda PR pubblica: personalizzala per risaltare sugli eventi condivisi con altri PR.',
-                            en: 'This is your public promoter card: customize it to stand out on events shared with other promoters.',
+                            it: 'Aggiungi una bio breve per spiegare stile, liste e tipo di serate che segui.',
+                            en: 'Add a short bio to explain your style, lists, and the kind of nights you manage.',
                           ),
                   ),
                   if (promoterCard.instagramHandle?.trim().isNotEmpty == true ||
                       promoterCard.tiktokHandle?.trim().isNotEmpty == true) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
                         if (promoterCard.instagramHandle?.trim().isNotEmpty ==
                             true)
-                          ActionChip(
+                          Chip(
                             avatar: const Icon(
                               Icons.camera_alt_outlined,
-                              size: 16,
+                              size: 18,
                             ),
                             label: Text(promoterCard.instagramHandle!),
-                            onPressed: onOpenInstagram,
                           ),
                         if (promoterCard.tiktokHandle?.trim().isNotEmpty ==
                             true)
-                          ActionChip(
+                          Chip(
                             avatar: const Icon(
-                              Icons.music_note_rounded,
-                              size: 16,
+                              Icons.music_note_outlined,
+                              size: 18,
                             ),
                             label: Text(promoterCard.tiktokHandle!),
-                            onPressed: onOpenTikTok,
                           ),
                       ],
                     ),
@@ -3533,13 +3648,6 @@ class _PromoterIdentityCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (onEdit != null) ...[
-              const SizedBox(width: 12),
-              IconButton(
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined),
-              ),
-            ],
           ],
         ),
       ),

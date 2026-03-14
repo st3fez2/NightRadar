@@ -706,11 +706,14 @@ class NightRadarRepository {
   }
 
   Future<void> createPromoterEvent({
-    required String venueId,
+    required String venueName,
+    required String city,
     required String title,
     required DateTime startsAt,
     required String genre,
+    String? addressLine,
     String? description,
+    String? coverImageUrl,
     int? minimumAge,
     String? contactPhone,
     String? contactEmail,
@@ -733,13 +736,16 @@ class NightRadarRepository {
     }
 
     await _client.rpc(
-      'promoter_create_event',
+      'promoter_create_event_v2',
       params: {
-        'p_venue_id': venueId,
+        'p_venue_name': venueName,
+        'p_city': city,
+        'p_address_line': addressLine,
         'p_title': title,
         'p_starts_at': startsAt.toUtc().toIso8601String(),
         'p_genre': genre,
         'p_description': description,
+        'p_cover_image_url': coverImageUrl,
         'p_minimum_age': minimumAge,
         'p_contact_phone': contactPhone,
         'p_contact_email': contactEmail,
@@ -804,23 +810,38 @@ class NightRadarRepository {
       throw const AuthException('Profilo PR non disponibile');
     }
 
-    final normalizedName = fileName.trim().isEmpty
-        ? 'promoter-card.png'
-        : fileName.trim();
-    final path = '${profile.id}/card-media/$normalizedName';
+    return _uploadPromoterMedia(
+      profileId: profile.id,
+      bytes: bytes,
+      fileName: fileName,
+      folder: 'card-media',
+      fallbackFileName: 'promoter-card.png',
+      contentType: contentType,
+    );
+  }
 
-    await _client.storage
-        .from('promoter-media')
-        .uploadBinary(
-          path,
-          bytes,
-          fileOptions: FileOptions(
-            upsert: true,
-            contentType: contentType ?? _guessImageContentType(normalizedName),
-          ),
-        );
+  Future<String> uploadPromoterEventImage({
+    required Uint8List bytes,
+    required String fileName,
+    String? contentType,
+  }) async {
+    _ensureMutationsAllowed(
+      'La demo non consente di caricare immagini evento.',
+    );
 
-    return _client.storage.from('promoter-media').getPublicUrl(path);
+    final profile = await getCurrentProfile();
+    if (profile == null || profile.role != AppRole.promoter) {
+      throw const AuthException('Profilo PR non disponibile');
+    }
+
+    return _uploadPromoterMedia(
+      profileId: profile.id,
+      bytes: bytes,
+      fileName: fileName,
+      folder: 'event-media',
+      fallbackFileName: 'event-cover.png',
+      contentType: contentType,
+    );
   }
 
   Future<void> togglePromoterReaction({
@@ -1592,6 +1613,33 @@ class NightRadarRepository {
       return 'image/gif';
     }
     return 'image/png';
+  }
+
+  Future<String> _uploadPromoterMedia({
+    required String profileId,
+    required Uint8List bytes,
+    required String fileName,
+    required String folder,
+    required String fallbackFileName,
+    String? contentType,
+  }) async {
+    final normalizedName = fileName.trim().isEmpty
+        ? fallbackFileName
+        : fileName.trim();
+    final path = '$profileId/$folder/$normalizedName';
+
+    await _client.storage
+        .from('promoter-media')
+        .uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: contentType ?? _guessImageContentType(normalizedName),
+          ),
+        );
+
+    return _client.storage.from('promoter-media').getPublicUrl(path);
   }
 
   DateTime? _parseDateTime(String? value) {
