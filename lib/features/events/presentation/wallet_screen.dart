@@ -215,16 +215,24 @@ class WalletScreen extends ConsumerWidget {
             ),
           );
         },
-        error: (error, stackTrace) => Center(
-          child: EmptyStateCard(
-            title: copy.text(
-              it: 'Wallet non disponibile',
-              en: 'Wallet unavailable',
-            ),
-            message: error.toString(),
+        error: (error, stackTrace) => ScreenStatusView(
+          title: copy.text(
+            it: 'Wallet non disponibile',
+            en: 'Wallet unavailable',
           ),
+          message: error.toString(),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => ScreenStatusView(
+          title: copy.text(
+            it: 'Sto aprendo il wallet',
+            en: 'Opening your wallet',
+          ),
+          message: copy.text(
+            it: 'Recupero QR, codici e dettagli della prenotazione.',
+            en: 'Loading QR, access codes, and reservation details.',
+          ),
+          loading: true,
+        ),
       ),
     );
   }

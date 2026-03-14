@@ -932,8 +932,13 @@ class _EventCard extends StatelessWidget {
               child: AspectRatio(
                 aspectRatio: 16 / 9,
                 child: event.coverImageUrl == null
-                    ? Container(color: const Color(0xFFEDE5DD))
-                    : Image.network(event.coverImageUrl!, fit: BoxFit.cover),
+                    ? const EventImagePlaceholder()
+                    : Image.network(
+                        event.coverImageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const EventImagePlaceholder(),
+                      ),
               ),
             ),
             Padding(

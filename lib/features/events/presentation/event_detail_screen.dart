@@ -51,6 +51,8 @@ class EventDetailScreen extends ConsumerWidget {
                       child: Image.network(
                         event.summary.coverImageUrl!,
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const EventImagePlaceholder(),
                       ),
                     ),
                   ),
@@ -395,19 +397,24 @@ class EventDetailScreen extends ConsumerWidget {
             ),
           );
         },
-        error: (error, stackTrace) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: EmptyStateCard(
-              title: copy.text(
-                it: 'Errore nel dettaglio evento',
-                en: 'Event detail error',
-              ),
-              message: error.toString(),
-            ),
+        error: (error, stackTrace) => ScreenStatusView(
+          title: copy.text(
+            it: 'Errore nel dettaglio evento',
+            en: 'Event detail error',
           ),
+          message: error.toString(),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => ScreenStatusView(
+          title: copy.text(
+            it: 'Sto aprendo l evento',
+            en: 'Opening the event',
+          ),
+          message: copy.text(
+            it: 'Recupero offerte, dettagli e contatti del PR.',
+            en: 'Loading offers, event details, and promoter contacts.',
+          ),
+          loading: true,
+        ),
       ),
     );
   }

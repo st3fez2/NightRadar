@@ -87,7 +87,7 @@ values
     'published',
     'Biglietto o accredito PR fino alle 00:30.',
     true,
-    'https://images.unsplash.com/photo-1571266028243-d220c9d94a62?auto=format&fit=crop&w=1200&q=80'
+    'https://st3fez2.github.io/NightRadar/assets/assets/branding/nightradar_mark.png'
   )
 on conflict (id) do nothing;
 

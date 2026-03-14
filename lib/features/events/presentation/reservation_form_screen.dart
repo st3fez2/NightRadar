@@ -474,16 +474,24 @@ class _ReservationFormScreenState extends ConsumerState<ReservationFormScreen> {
             ),
           );
         },
-        error: (error, stackTrace) => Center(
-          child: EmptyStateCard(
-            title: copy.text(
-              it: 'Prenotazione non disponibile',
-              en: 'Reservation unavailable',
-            ),
-            message: error.toString(),
+        error: (error, stackTrace) => ScreenStatusView(
+          title: copy.text(
+            it: 'Prenotazione non disponibile',
+            en: 'Reservation unavailable',
           ),
+          message: error.toString(),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => ScreenStatusView(
+          title: copy.text(
+            it: 'Sto preparando la prenotazione',
+            en: 'Preparing the reservation',
+          ),
+          message: copy.text(
+            it: 'Carico evento, offerta selezionata e regole di accesso.',
+            en: 'Loading the event, selected offer, and access rules.',
+          ),
+          loading: true,
+        ),
       ),
     );
   }

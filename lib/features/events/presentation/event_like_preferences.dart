@@ -53,14 +53,18 @@ class EventLikePreferencesController
     final rawLikes = preferences?.getString(_likedEventsKey);
     final likedEventIds = <String>{};
     if (rawLikes != null && rawLikes.isNotEmpty) {
-      final decoded = jsonDecode(rawLikes);
-      if (decoded is List<dynamic>) {
-        for (final item in decoded) {
-          final eventId = item?.toString().trim() ?? '';
-          if (eventId.isNotEmpty) {
-            likedEventIds.add(eventId);
+      try {
+        final decoded = jsonDecode(rawLikes);
+        if (decoded is List<dynamic>) {
+          for (final item in decoded) {
+            final eventId = item?.toString().trim() ?? '';
+            if (eventId.isNotEmpty) {
+              likedEventIds.add(eventId);
+            }
           }
         }
+      } on FormatException {
+        preferences?.remove(_likedEventsKey);
       }
     }
 
@@ -84,9 +88,12 @@ class EventLikePreferencesController
 
   static String _generateViewerToken() {
     final random = Random.secure();
-    final first = random.nextInt(1 << 32).toRadixString(16).padLeft(8, '0');
-    final second = random.nextInt(1 << 32).toRadixString(16).padLeft(8, '0');
+    // Keep the random range small enough to behave consistently on Flutter web.
+    final first = random.nextInt(0x10000).toRadixString(16).padLeft(4, '0');
+    final second = random.nextInt(0x10000).toRadixString(16).padLeft(4, '0');
+    final third = random.nextInt(0x10000).toRadixString(16).padLeft(4, '0');
+    final fourth = random.nextInt(0x10000).toRadixString(16).padLeft(4, '0');
     final millis = DateTime.now().millisecondsSinceEpoch.toRadixString(16);
-    return 'viewer-$millis-$first$second';
+    return 'viewer-$millis-$first$second$third$fourth';
   }
 }

@@ -493,16 +493,24 @@ class PromoterDashboardScreen extends ConsumerWidget {
             ),
           );
         },
-        error: (error, stackTrace) => Center(
-          child: EmptyStateCard(
-            title: copy.text(
-              it: 'Dashboard PR non disponibile',
-              en: 'Promoter dashboard unavailable',
-            ),
-            message: error.toString(),
+        error: (error, stackTrace) => ScreenStatusView(
+          title: copy.text(
+            it: 'Dashboard PR non disponibile',
+            en: 'Promoter dashboard unavailable',
           ),
+          message: error.toString(),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => ScreenStatusView(
+          title: copy.text(
+            it: 'Sto aprendo la dashboard PR',
+            en: 'Opening the promoter dashboard',
+          ),
+          message: copy.text(
+            it: 'Recupero serate, liste, richieste e metriche operative.',
+            en: 'Loading events, guest lists, contact requests, and operating metrics.',
+          ),
+          loading: true,
+        ),
       ),
     );
   }

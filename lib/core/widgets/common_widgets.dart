@@ -288,3 +288,90 @@ class EmptyStateCard extends StatelessWidget {
     );
   }
 }
+
+class ScreenStatusView extends StatelessWidget {
+  const ScreenStatusView({
+    super.key,
+    required this.title,
+    required this.message,
+    this.loading = false,
+  });
+
+  final String title;
+  final String message;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (loading) const CircularProgressIndicator(),
+                  if (loading) const SizedBox(height: 18),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(message, textAlign: TextAlign.center),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class EventImagePlaceholder extends StatelessWidget {
+  const EventImagePlaceholder({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFF4E6DB), Color(0xFFE9DDD1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 56,
+              width: 56,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Icon(
+                Icons.photo_camera_back_outlined,
+                color: Color(0xFFE85D3F),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'NightRadar',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

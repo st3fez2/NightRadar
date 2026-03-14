@@ -86,16 +86,20 @@ class UserDiscoveryPreferencesController
     final trustedRaw = preferences?.getString(_trustedPromotersKey);
     final trustedPromoters = <String, String>{};
     if (trustedRaw != null && trustedRaw.isNotEmpty) {
-      final decoded = jsonDecode(trustedRaw);
-      if (decoded is Map<String, dynamic>) {
-        for (final entry in decoded.entries) {
-          final key = entry.key.trim();
-          final value = entry.value?.toString().trim() ?? '';
-          if (key.isEmpty || value.isEmpty) {
-            continue;
+      try {
+        final decoded = jsonDecode(trustedRaw);
+        if (decoded is Map<String, dynamic>) {
+          for (final entry in decoded.entries) {
+            final key = entry.key.trim();
+            final value = entry.value?.toString().trim() ?? '';
+            if (key.isEmpty || value.isEmpty) {
+              continue;
+            }
+            trustedPromoters[key] = value;
           }
-          trustedPromoters[key] = value;
         }
+      } on FormatException {
+        preferences?.remove(_trustedPromotersKey);
       }
     }
 
